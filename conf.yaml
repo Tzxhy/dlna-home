@@ -1,0 +1,10 @@
+# 是否检查更新
+check-update: false
+# 是否保持原始文件名，false时会将文件名编码为十六进制
+keep-file-name: false
+# 备份数据库频率
+backup-db: "1d"
+# 是否可以注册用户
+can-register-user: false
+# 是否在注册用户后，为用户生成默认目录群
+create-default-dirs-after-register: false
