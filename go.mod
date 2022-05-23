@@ -5,20 +5,19 @@ go 1.18
 require (
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/gin-gonic/gin v1.7.7
+	github.com/h2non/filetype v1.1.3
+	github.com/hashicorp/go-retryablehttp v0.7.1
+	github.com/koron/go-ssdp v0.0.3
 	github.com/mattn/go-sqlite3 v1.14.13
+	github.com/pkg/errors v0.9.1
 	gorm.io/driver/sqlite v1.3.2
 	gorm.io/gorm v1.23.5
 )
 
 require (
-	github.com/h2non/filetype v1.1.3 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/koron/go-ssdp v0.0.3 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
 )
 

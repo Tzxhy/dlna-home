@@ -1,19 +1,23 @@
 {
 	"cSpell.words": [
-        "datetime",
-        "Filesize",
-        "gonic",
-        "gorm",
-        "httphandlers",
-        "rakyll",
-        "RTYPE",
-        "soapcalls",
-        "SSDP",
-        "statik",
-        "tvdata",
-        "upnp"
-    ],
+		"datetime",
+		"dlna",
+		"Filesize",
+		"gonic",
+		"gorm",
+		"httphandlers",
+		"rakyll",
+		"RTYPE",
+		"soapcalls",
+		"SSDP",
+		"statik",
+		"tvdata",
+		"upnp"
+	],
 	"go.toolsEnvVars": {
 		"GOPROXY": "https://goproxy.io,direct"
-	}
+	},
+	"editor.codeActionsOnSave": {
+		"source.fixAll": true
+	  }
 }
