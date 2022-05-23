@@ -13,6 +13,8 @@ func InitRouter() *gin.Engine {
 	v1 := r.Group("/api/v1")
 
 	v1.GET("device-list", controllers.GetDeviceList)
+	v1.GET("playlist", controllers.GetPlayList)
+	v1.POST("delete-playlist", controllers.DeletePlayList)
 	v1.POST("create-playlist", controllers.CreatePlayList)
 
 	v1.POST("update-playlist", controllers.SetPlayList)

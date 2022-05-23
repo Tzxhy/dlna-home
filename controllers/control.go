@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -31,6 +30,39 @@ func GetDeviceList(c *gin.Context) {
 	})
 }
 
+type PlayListItem struct {
+	models.PlayListItem
+	List []models.AudioItem `json:"list"`
+}
+
+func GetPlayList(c *gin.Context) {
+	list, _ := models.GetPlayList()
+	var newList []PlayListItem
+	for _, item := range *list {
+		items := models.GetPlayListItems(item.Pid)
+		newList = append(newList, PlayListItem{
+			item,
+			*items,
+		})
+	}
+	c.JSON(http.StatusOK, &gin.H{
+		"list": newList,
+	})
+}
+
+type DeletePlayListReq struct {
+	Pid string `json:"pid" binding:"required"`
+}
+
+func DeletePlayList(c *gin.Context) {
+	var deletePlayListReq DeletePlayListReq
+	if c.ShouldBind(&deletePlayListReq) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+	models.DeletePlayList(deletePlayListReq.Pid)
+}
+
 type CreatePlayListReq struct {
 	Name string `json:"name" binding:"required"`
 }
@@ -55,6 +87,7 @@ func CreatePlayList(c *gin.Context) {
 
 type SetPlayListReq struct {
 	Pid  string                 `json:"pid" binding:"required"`
+	Name string                 `json:"name" form:"name"`
 	List []models.ListItemParam `json:"list" binding:"required"`
 }
 
@@ -65,6 +98,9 @@ func SetPlayList(c *gin.Context) {
 		return
 	}
 	ok := models.SetPlayList(setPlayListReq.Pid, setPlayListReq.List)
+	if setPlayListReq.Name != "" {
+		models.RenamePlayList(setPlayListReq.Pid, setPlayListReq.Name)
+	}
 	c.JSON(http.StatusOK, &gin.H{
 		"ok": ok,
 	})
@@ -110,23 +146,12 @@ func check(err error) {
 var serverMap = make(map[string]*(soapcalls.TVPayload), 1)
 var songListMap = make(map[string]*[]models.AudioItem, 0)
 var create = func(actionReq ActionReq, rendererUrl string) *soapcalls.TVPayload {
-	list := models.GetPlayListItems(actionReq.Pid)
-	utils.Shuffle(list)
-	songListMap[rendererUrl] = list
+
 	upnpServicesURLs, err := soapcalls.DMRExtractor(actionReq.RendererUrl)
 	check(err)
 	whereToListen, err := utils.URLtoListenIPandPort(actionReq.RendererUrl)
 	check(err)
 	callbackPath, err := utils.RandomString()
-	check(err)
-	url := (*list)[0].Url
-	// mediaURL, err := utils.StreamURL(context.Background(), url)
-	// check(err)
-
-	mediaURLinfo, err := utils.StreamURL(context.Background(), url)
-	check(err)
-
-	mediaType, err := utils.GetMimeDetailsFromStream(mediaURLinfo)
 	check(err)
 	tvdata := &soapcalls.TVPayload{
 		ControlURL:                  upnpServicesURLs.AVTransportControlURL,
@@ -135,7 +160,7 @@ var create = func(actionReq ActionReq, rendererUrl string) *soapcalls.TVPayload 
 		CallbackURL:                 "http://" + whereToListen + "/" + callbackPath,
 		MediaURL:                    "http://" + whereToListen + "/" + "media",
 		SubtitlesURL:                "http://" + whereToListen + "/",
-		MediaType:                   mediaType,
+		MediaType:                   "",
 		CurrentTimers:               make(map[string]*time.Timer),
 		MediaRenderersStates:        make(map[string]*soapcalls.States),
 		InitialMediaRenderersStates: make(map[string]bool),
@@ -150,7 +175,7 @@ var create = func(actionReq ActionReq, rendererUrl string) *soapcalls.TVPayload 
 	// We pass the tvdata here as we need the callback handlers to be able to react
 	// to the different media renderer states.
 	go func() {
-		err := s.StartServer(serverStarted, mediaURLinfo, "", tvdata, list, rendererUrl)
+		err := s.StartServer(serverStarted, tvdata, rendererUrl)
 		check(err)
 	}()
 	// // Wait for HTTP server to properly initialize
@@ -163,12 +188,16 @@ func startPlayPush(actionReq ActionReq) {
 	rendererUrl := actionReq.RendererUrl
 
 	tv, ok := serverMap[rendererUrl]
+	list := models.GetPlayListItems(actionReq.Pid)
+	utils.Shuffle(list)
+	songListMap[rendererUrl] = list
 
 	if ok { // 已有，直接操作
+		tv.PlayListUrls = *list
 		tv.SendtoTV("Play1")
 	} else {
 		tvdata := create(actionReq, rendererUrl)
-
+		tvdata.PlayListUrls = *list
 		if err := tvdata.SendtoTV("Play1"); err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)

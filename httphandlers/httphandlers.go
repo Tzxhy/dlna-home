@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"gitee.com/tzxhy/dlna-home/models"
 	"gitee.com/tzxhy/dlna-home/soapcalls"
 	"gitee.com/tzxhy/dlna-home/utils"
 )
@@ -48,10 +47,7 @@ type osFileType struct {
 // also handle the subscriptions requests from the DMR devices.
 func (s *HTTPserver) StartServer(
 	serverStarted chan<- struct{},
-	media,
-	subtitles interface{},
 	tvpayload *soapcalls.TVPayload,
-	list *[]models.AudioItem,
 	rendererUrl string,
 ) error {
 	mURL, err := url.Parse(tvpayload.MediaURL)
@@ -59,18 +55,12 @@ func (s *HTTPserver) StartServer(
 		return fmt.Errorf("failed to parse MediaURL: %w", err)
 	}
 
-	// sURL, err := url.Parse(tvpayload.SubtitlesURL)
-	if err != nil {
-		return fmt.Errorf("failed to parse SubtitlesURL: %w", err)
-	}
-
 	callbackURL, err := url.Parse(tvpayload.CallbackURL)
 	if err != nil {
 		return fmt.Errorf("failed to parse CallbackURL: %w", err)
 	}
 
-	s.mux.HandleFunc(mURL.Path, s.serveMediaHandler(tvpayload, media, list, rendererUrl))
-	// s.mux.HandleFunc(sURL.Path, s.serveMediaHandler(nil, subtitles, nil))
+	s.mux.HandleFunc(mURL.Path, s.serveMediaHandler(tvpayload, rendererUrl))
 	s.mux.HandleFunc(callbackURL.Path, s.callbackHandler(tvpayload))
 
 	ln, err := net.Listen("tcp", s.http.Addr)
@@ -88,52 +78,41 @@ var songIdxMap = make(map[string]uint8)
 
 func (s *HTTPserver) serveMediaHandler(
 	tv *soapcalls.TVPayload,
-	media interface{},
-	list *[]models.AudioItem,
 	rendererUrl string,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		// reqParsed, _ := io.ReadAll(req.Body)
-		// reqParsedUnescape := html.UnescapeString(string(reqParsed))
-		// utils.WriteLog("media:")
-		// utils.WriteLog(reqParsedUnescape)
-		// utils.WriteLog(req.Header)
-		// var media2 interface{}
-		// media2 = media
+		reqParsed, _ := io.ReadAll(req.Body)
+		reqParsedUnescape := html.UnescapeString(string(reqParsed))
+		utils.WriteLog("media:")
+		utils.WriteLog(reqParsedUnescape)
+		utils.WriteLog(req.Header)
+		header := req.Header
+		val, has := header["Range"]
+		isNewMedia := false
+		if has {
+			log.Println("range value: ", val[0])
+			isNewMedia = strings.Contains(val[0], "bytes=0-") // 有的话，就切，没有，就不切
+		}
 
-		// switch f := media.(type) {
-		// case string:
-		// 	m, err := os.Open(f)
-		// 	if err != nil {
-		// 		http.NotFound(w, req)
-		// 		return
-		// 	}
-		// 	defer m.Close()
-
-		// 	info, err := m.Stat()
-		// 	if err != nil {
-		// 		http.NotFound(w, req)
-		// 		return
-		// 	}
-
-		// 	media2 = osFileType{
-		// 		time: info.ModTime(),
-		// 		file: m,
-		// 		path: f,
-		// 	}
-		// }
-		log.Print("list", list)
 		v, has := songIdxMap[rendererUrl]
+		list := tv.PlayListUrls
 		if !has { // 无，写0
 			songIdxMap[rendererUrl] = 0
 			v = 0
-		} else { // 有，加1取模
-			length := uint8(len(*list))
-			nextIdx := (v + 1) % length
-			songIdxMap[rendererUrl] = nextIdx
-			v = nextIdx
+			utils.WriteLog("首次播放：")
+			utils.WriteLog(list[v].Url)
+		} else { // 有
+			if isNewMedia { // 下一曲？ 加1取模；否则还是当前url
+				utils.WriteLog("切换url：")
+				length := uint8(len(list))
+				nextIdx := (v + 1) % length
+				songIdxMap[rendererUrl] = nextIdx
+				v = nextIdx
+				utils.WriteLog(list[v].Url)
+			}
 		}
-		mediaURLinfo, _ := utils.StreamURL(context.Background(), (*list)[v].Url)
+
+		mediaURLinfo, _ := utils.StreamURL(context.Background(), list[v].Url)
 
 		serveContent(w, req, tv, mediaURLinfo, s.ffmpeg)
 	}

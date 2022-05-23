@@ -32,11 +32,24 @@ func CreatePlayList(name string) (string, error) {
 	return pid, nil
 }
 
+func GetPlayList() (*[]PlayListItem, error) {
+	var playLists []PlayListItem
+	err := DB.Find(&playLists).Error
+	return &playLists, err
+}
+
 type ListItemParam struct {
 	Name string
 	Url  string
 }
 
+func RenamePlayList(pid, name string) {
+	DB.Where(&PlayListItem{
+		Pid: pid,
+	}).Updates(&PlayListItem{
+		Name: name,
+	})
+}
 func SetPlayList(pid string, list []ListItemParam) bool {
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		// 删除原有绑定
@@ -66,6 +79,27 @@ func SetPlayList(pid string, list []ListItemParam) bool {
 	})
 	return err == nil
 
+}
+
+func DeletePlayList(pid string) bool {
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		// 删除原有绑定
+		err := DB.Where(&AudioItem{
+			PlayListItemID: pid,
+		}).Delete(&AudioItem{}).Error
+		if err != nil {
+			return err
+		}
+
+		err = DB.Where(&PlayListItem{
+			Pid: pid,
+		}).Delete(&PlayListItem{}).Error
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return err == nil
 }
 
 func GetPlayListItems(pid string) *[]AudioItem {

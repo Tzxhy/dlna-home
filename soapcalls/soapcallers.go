@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"gitee.com/tzxhy/dlna-home/models"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/pkg/errors"
 )
@@ -38,6 +39,7 @@ type TVPayload struct {
 	MediaType           string
 	SubtitlesURL        string
 	Transcode           bool
+	PlayListUrls        []models.AudioItem
 }
 
 type getMuteRespBody struct {
