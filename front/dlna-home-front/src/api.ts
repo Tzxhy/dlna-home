@@ -49,3 +49,23 @@ export async function actionRemote(pid: string, action_name: 'start' | 'stop', r
         renderer_url,
     }).then(d => d.data);
 }
+
+export async function setVolumeApi(renderer_url: string, level: number): Promise<boolean> {
+    return axios.post<any>('/api/v1/volume', {
+        renderer_url,
+        level,
+    }).then(d => {
+        return d.data?.ok ?? false as boolean;
+    });
+}
+
+export async function getVolumeApi(renderer_url: string): Promise<{
+    ok: boolean;
+	level: number;
+}> {
+    return axios.get<any>('/api/v1/volume', {
+        params: {
+            renderer_url,
+        },
+    }).then(d => d.data);
+}

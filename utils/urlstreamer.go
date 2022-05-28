@@ -18,6 +18,7 @@ func StreamURL(ctx context.Context, s string) (io.ReadCloser, error) {
 
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s, nil)
+
 	if err != nil {
 		return nil, fmt.Errorf("streamURL failed to call NewRequest: %w", err)
 	}

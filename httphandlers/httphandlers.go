@@ -111,7 +111,12 @@ func (s *HTTPserver) serveMediaHandler(
 				utils.WriteLog(list[v].Url)
 			}
 		}
+		// ctx := context.Background()
 
+		// timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+		// defer cancel()
+
+		// mediaURLinfo, _ := utils.StreamURL(timeoutCtx, list[v].Url)
 		mediaURLinfo, _ := utils.StreamURL(context.Background(), list[v].Url)
 
 		serveContent(w, req, tv, mediaURLinfo, s.ffmpeg)

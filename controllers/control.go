@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -63,6 +64,68 @@ func DeletePlayList(c *gin.Context) {
 	models.DeletePlayList(deletePlayListReq.Pid)
 }
 
+type GetDeviceVolumeReq struct {
+	RendererUrl string `json:"renderer_url" form:"renderer_url" binding:"required"`
+}
+
+func GetDeviceVolume(c *gin.Context) {
+	var getDeviceVolumeReq GetDeviceVolumeReq
+	if c.ShouldBind(&getDeviceVolumeReq) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+
+	rendererUrl := getDeviceVolumeReq.RendererUrl
+
+	tv, ok := serverMap[rendererUrl]
+	if ok {
+		val, err := tv.GetVolumeSoapCall()
+		if err != nil {
+			log.Println("err: ", err)
+		}
+		c.JSON(http.StatusOK, &gin.H{
+			"ok":    err == nil,
+			"level": val,
+		})
+	} else {
+		c.JSON(http.StatusOK, &gin.H{
+			"ok":    false,
+			"level": 0,
+		})
+	}
+}
+
+type SetDeviceVolumeReq struct {
+	RendererUrl string `json:"renderer_url" binding:"required"`
+	Level       uint8  `json:"level" form:"level"`
+}
+
+func SetDeviceVolume(c *gin.Context) {
+	var setDeviceVolumeReq SetDeviceVolumeReq
+	if c.ShouldBind(&setDeviceVolumeReq) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+
+	rendererUrl := setDeviceVolumeReq.RendererUrl
+
+	tv, ok := serverMap[rendererUrl]
+	if ok {
+		l := strconv.Itoa(int(setDeviceVolumeReq.Level))
+		err := tv.SetVolumeSoapCall(l)
+		if err != nil {
+			log.Println("err: ", err)
+		}
+		c.JSON(http.StatusOK, &gin.H{
+			"ok": err == nil,
+		})
+	} else {
+		c.JSON(http.StatusOK, &gin.H{
+			"ok": false,
+		})
+	}
+}
+
 type CreatePlayListReq struct {
 	Name string `json:"name" binding:"required"`
 }
@@ -105,8 +168,6 @@ func SetPlayList(c *gin.Context) {
 		"ok": ok,
 	})
 }
-
-const ()
 
 type ActionReq struct {
 	// start, play, stop, pause
