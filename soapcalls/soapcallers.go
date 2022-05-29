@@ -40,6 +40,10 @@ type TVPayload struct {
 	SubtitlesURL        string
 	Transcode           bool
 	PlayListUrls        []models.AudioItem
+	PlayMode            uint8
+	CurrentIdx          int16
+	PlayListTempUrls    []models.AudioItem
+	Status              string
 }
 
 type getMuteRespBody struct {
@@ -478,9 +482,9 @@ func (p *TVPayload) SetVolumeSoapCall(v string) error {
 // states when communicating with the DMR devices.
 func (p *TVPayload) SendtoTV(action string) error {
 	if action == "Play1" {
-		if err := p.SubscribeSoapCall(""); err != nil {
-			return fmt.Errorf("SendtoTV subscribe call error: %w", err)
-		}
+		// if err := p.SubscribeSoapCall(""); err != nil {
+		// 	return fmt.Errorf("SendtoTV subscribe call error: %w", err)
+		// }
 		if err := p.setAVTransportSoapCall(); err != nil {
 			return fmt.Errorf("SendtoTV set AVT Transport error: %w", err)
 		}
@@ -496,11 +500,11 @@ func (p *TVPayload) SendtoTV(action string) error {
 		p.RUnlock()
 
 		// Cleaning up all uuids on force stop.
-		for uuids := range localStates {
-			if err := p.UnsubscribeSoapCall(uuids); err != nil {
-				return fmt.Errorf("SendtoTV unsubscribe call error: %w", err)
-			}
-		}
+		// for uuids := range localStates {
+		// 	if err := p.UnsubscribeSoapCall(uuids); err != nil {
+		// 		return fmt.Errorf("SendtoTV unsubscribe call error: %w", err)
+		// 	}
+		// }
 
 		// Clear timers on Stop to avoid errors responses
 		// from the media renderers. If we don't clear those, we

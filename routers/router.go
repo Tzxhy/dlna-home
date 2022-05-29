@@ -12,6 +12,7 @@ func InitRouter() *gin.Engine {
 	r.Use(middlewares.FrontendFileHandler())
 	v1 := r.Group("/api/v1")
 
+	v1.GET("get-status", controllers.GetStatus)
 	v1.GET("device-list", controllers.GetDeviceList)
 	v1.GET("playlist", controllers.GetPlayList)
 	v1.POST("delete-playlist", controllers.DeletePlayList)

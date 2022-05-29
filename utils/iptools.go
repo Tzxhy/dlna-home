@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-var idx = 0
-
 // URLtoListenIPandPort for a given internal URL,
 // find the correct IP/Interface to listen to.
 func URLtoListenIPandPort(u string) (string, error) {
@@ -39,10 +37,6 @@ func URLtoListenIPandPort(u string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("URLtoListenIPandPort port error: %w", err)
 	}
-	p, _ := strconv.Atoi(portToListen)
-	idx = idx + 1
-	p = p + idx
-	portToListen = strconv.Itoa(p)
 
 	res := net.JoinHostPort(ipToListen, portToListen)
 

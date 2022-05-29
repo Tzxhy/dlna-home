@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"html"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"gitee.com/tzxhy/dlna-home/constants"
+	"gitee.com/tzxhy/dlna-home/share"
 	"gitee.com/tzxhy/dlna-home/soapcalls"
 	"gitee.com/tzxhy/dlna-home/utils"
 )
@@ -48,20 +48,19 @@ type osFileType struct {
 func (s *HTTPserver) StartServer(
 	serverStarted chan<- struct{},
 	tvpayload *soapcalls.TVPayload,
-	rendererUrl string,
 ) error {
 	mURL, err := url.Parse(tvpayload.MediaURL)
 	if err != nil {
 		return fmt.Errorf("failed to parse MediaURL: %w", err)
 	}
 
-	callbackURL, err := url.Parse(tvpayload.CallbackURL)
-	if err != nil {
-		return fmt.Errorf("failed to parse CallbackURL: %w", err)
-	}
+	// callbackURL, err := url.Parse(tvpayload.CallbackURL)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to parse CallbackURL: %w", err)
+	// }
 
-	s.mux.HandleFunc(mURL.Path, s.serveMediaHandler(tvpayload, rendererUrl))
-	s.mux.HandleFunc(callbackURL.Path, s.callbackHandler(tvpayload))
+	s.mux.HandleFunc(mURL.Path, s.serveMediaHandler())
+	// s.mux.HandleFunc(callbackURL.Path, s.callbackHandler(tvpayload))
 
 	ln, err := net.Listen("tcp", s.http.Addr)
 	if err != nil {
@@ -74,103 +73,137 @@ func (s *HTTPserver) StartServer(
 	return nil
 }
 
-var songIdxMap = make(map[string]uint8)
-
-func (s *HTTPserver) serveMediaHandler(
-	tv *soapcalls.TVPayload,
-	rendererUrl string,
-) http.HandlerFunc {
+func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		reqParsed, _ := io.ReadAll(req.Body)
-		reqParsedUnescape := html.UnescapeString(string(reqParsed))
-		utils.WriteLog("media:")
-		utils.WriteLog(reqParsedUnescape)
-		utils.WriteLog(req.Header)
+		renderer_url := req.URL.Query()["renderer_url"]
+		rendererUrl, decodeErr := url.QueryUnescape(renderer_url[0])
+		if decodeErr != nil {
+			return
+		}
 		header := req.Header
 		val, has := header["Range"]
 		isNewMedia := false
 		if has {
-			log.Println("range value: ", val[0])
 			isNewMedia = strings.Contains(val[0], "bytes=0-") // 有的话，就切，没有，就不切
 		}
 
-		v, has := songIdxMap[rendererUrl]
+		tv := share.TvDataMap[rendererUrl]
+
+		v := tv.CurrentIdx
 		list := tv.PlayListUrls
-		if !has { // 无，写0
-			songIdxMap[rendererUrl] = 0
-			v = 0
-			utils.WriteLog("首次播放：")
-			utils.WriteLog(list[v].Url)
-		} else { // 有
-			if isNewMedia { // 下一曲？ 加1取模；否则还是当前url
-				utils.WriteLog("切换url：")
-				length := uint8(len(list))
-				nextIdx := (v + 1) % length
-				songIdxMap[rendererUrl] = nextIdx
-				v = nextIdx
-				utils.WriteLog(list[v].Url)
+		if tv.PlayMode == constants.PLAY_MODE_SEQ { // 顺序播放
+			if v < 0 { // 无，写0
+				tv.CurrentIdx = 0
+				v = 0
+				utils.WriteLog("first media: " + list[v].Name)
+			} else { // 有
+				if isNewMedia { // 下一曲？ 加1取模；否则还是当前url
+					length := int16(len(list))
+					nextIdx := (v + 1) % length
+					if v+1 >= length { // 播放完毕，直接停止
+						tv.SendtoTV("Stop")
+						return
+					}
+					tv.CurrentIdx = nextIdx
+					v = nextIdx
+					utils.WriteLog("change media: " + list[v].Name)
+				}
+			}
+
+		} else if tv.PlayMode == constants.PLAY_MODE_REPEAT_ONE { // 单曲循环
+
+		} else if tv.PlayMode == constants.PLAY_MODE_LIST_REPEAT { // 列表循环
+			if v < 0 { // 无，写0
+				tv.CurrentIdx = 0
+				v = 0
+				utils.WriteLog("first media: " + list[v].Name)
+			} else { // 有
+				if isNewMedia { // 下一曲？ 加1取模；否则还是当前url
+					length := int16(len(list))
+					nextIdx := (v + 1) % length
+					tv.CurrentIdx = nextIdx
+					v = nextIdx
+					utils.WriteLog("change media: " + list[v].Name)
+				}
+			}
+		} else if tv.PlayMode == constants.PLAY_MODE_RANDOM { // 随机播放
+			// if len(tv.PlayListTempUrls) == 0 { // 没有初始化过
+			// 	var playListTempUrls = make([]models.AudioItem, len(tv.PlayListUrls))
+			// 	copy(playListTempUrls, tv.PlayListUrls)
+			// 	utils.Shuffle(&playListTempUrls)
+			// 	tv.PlayListTempUrls = playListTempUrls
+			// }
+
+			list = tv.PlayListTempUrls
+			if v < 0 { // 无，写0
+				tv.CurrentIdx = 0
+				v = 0
+				utils.WriteLog("first media: " + list[v].Name)
+			} else { // 有
+				if isNewMedia { // 下一曲？ 加1取模；否则还是当前url
+					length := int16(len(list))
+					nextIdx := (v + 1) % length
+					tv.CurrentIdx = nextIdx
+					v = nextIdx
+					utils.WriteLog("change media: " + list[v].Name)
+				}
 			}
 		}
-		// ctx := context.Background()
 
-		// timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Minute)
-		// defer cancel()
-
-		// mediaURLinfo, _ := utils.StreamURL(timeoutCtx, list[v].Url)
 		mediaURLinfo, _ := utils.StreamURL(context.Background(), list[v].Url)
 
 		serveContent(w, req, tv, mediaURLinfo, s.ffmpeg)
 	}
 }
 
-func (s *HTTPserver) callbackHandler(tv *soapcalls.TVPayload) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		reqParsed, _ := io.ReadAll(req.Body)
-		sidVal, sidExists := req.Header["Sid"]
-		reqParsedUnescape := html.UnescapeString(string(reqParsed))
-		utils.WriteLog("callback: ")
-		utils.WriteLog(reqParsedUnescape)
-		utils.WriteLog(req.Header)
+// func (s *HTTPserver) callbackHandler(tv *soapcalls.TVPayload) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, req *http.Request) {
+// 		reqParsed, _ := io.ReadAll(req.Body)
+// 		sidVal, sidExists := req.Header["Sid"]
+// 		reqParsedUnescape := html.UnescapeString(string(reqParsed))
+// 		utils.WriteLog("callback: ")
+// 		utils.WriteLog(reqParsedUnescape)
+// 		utils.WriteLog(req.Header)
 
-		if !sidExists {
-			http.NotFound(w, req)
-			return
-		}
+// 		if !sidExists {
+// 			http.NotFound(w, req)
+// 			return
+// 		}
 
-		if sidVal[0] == "" {
-			http.NotFound(w, req)
-			return
-		}
+// 		if sidVal[0] == "" {
+// 			http.NotFound(w, req)
+// 			return
+// 		}
 
-		uuid := strings.TrimPrefix(sidVal[0], "uuid:")
+// 		uuid := strings.TrimPrefix(sidVal[0], "uuid:")
 
-		// Apparently we should ignore the first message
-		// On some media renderers we receive a STOPPED message
-		// even before we start streaming.
-		seq, err := tv.GetSequence(uuid)
-		if err != nil {
-			http.NotFound(w, req)
-			return
-		}
+// 		// Apparently we should ignore the first message
+// 		// On some media renderers we receive a STOPPED message
+// 		// even before we start streaming.
+// 		seq, err := tv.GetSequence(uuid)
+// 		if err != nil {
+// 			http.NotFound(w, req)
+// 			return
+// 		}
 
-		if seq == 0 {
-			tv.IncreaseSequence(uuid)
-			fmt.Fprintf(w, "OK\n")
-			return
-		}
+// 		if seq == 0 {
+// 			tv.IncreaseSequence(uuid)
+// 			fmt.Fprintf(w, "OK\n")
+// 			return
+// 		}
 
-		previousstate, newstate, err := soapcalls.EventNotifyParser(reqParsedUnescape)
-		if err != nil {
-			http.NotFound(w, req)
-			return
-		}
+// 		previousstate, newstate, err := soapcalls.EventNotifyParser(reqParsedUnescape)
+// 		if err != nil {
+// 			http.NotFound(w, req)
+// 			return
+// 		}
 
-		if !tv.UpdateMRstate(previousstate, newstate, uuid) {
-			http.NotFound(w, req)
-			return
-		}
-	}
-}
+// 		if !tv.UpdateMRstate(previousstate, newstate, uuid) {
+// 			http.NotFound(w, req)
+// 			return
+// 		}
+// 	}
+// }
 
 // StopServer forcefully closes the HTTP server.
 func (s *HTTPserver) StopServer() {

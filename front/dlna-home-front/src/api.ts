@@ -42,11 +42,13 @@ export async function deletePlayListApi(pid: string): Promise<void> {
     }).then(d => d.data);
 }
 
-export async function actionRemote(pid: string, action_name: 'start' | 'stop', renderer_url: string): Promise<void> {
+export async function actionRemote(
+    pid: string, action_name: 'start' | 'stop', renderer_url: string, play_mode = 0): Promise<void> {
     await axios.post<any>('/api/v1/action', {
         pid,
         action_name,
         renderer_url,
+        play_mode,
     }).then(d => d.data);
 }
 
@@ -68,4 +70,32 @@ export async function getVolumeApi(renderer_url: string): Promise<{
             renderer_url,
         },
     }).then(d => d.data);
+}
+export async function nextSongApi(renderer_url: string): Promise<void> {
+    await axios.post<any>('/api/v1/action', {
+        renderer_url,
+        action_name: 'next',
+    });
+}
+export async function prevSongApi(renderer_url: string): Promise<void> {
+    await axios.post<any>('/api/v1/action', {
+        renderer_url,
+        action_name: 'previous',
+    });
+}
+
+export async function changePlayModeApi(renderer_url: string, mode: number): Promise<void> {
+    await axios.post<any>('/api/v1/action', {
+        renderer_url,
+        action_name: 'changePlayMode',
+        play_mode: mode,
+    });
+}
+type StatusResp = Record<string, {
+    status: 'play' | 'stop';
+    renderer_url: string;
+    url: string;
+}>
+export async function getStatusApi(): Promise<StatusResp> {
+    return axios.get<any>('/api/v1/get-status').then(d => d.data);
 }

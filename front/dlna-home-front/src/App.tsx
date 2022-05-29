@@ -4,10 +4,12 @@ import {
     AutoCenter,
     Button,
     Card,
+    FloatingBubble,
     Form,
     Input,
     List,
     Modal,
+    Popup,
     PullToRefresh,
     Selector,
     Space,
@@ -18,6 +20,7 @@ import {
     SelectorOption,
 } from 'antd-mobile/es/components/selector';
 import {
+    MovieOutline,
     PlayOutline, SoundMuteOutline, SoundOutline, StopOutline,
 } from 'antd-mobile-icons';
 import {
@@ -28,9 +31,18 @@ import {
 
 import {
     actionRemote,
+    changePlayModeApi,
     createPlayList,
     deletePlayListApi,
-    getDeviceList, getPlayList, getVolumeApi, PlayList, setVolumeApi, updatePlayListApi,
+    getDeviceList,
+    getPlayList,
+    getStatusApi,
+    getVolumeApi,
+    nextSongApi,
+    PlayList,
+    prevSongApi,
+    setVolumeApi,
+    updatePlayListApi,
 } from './api';
 
 
@@ -69,10 +81,11 @@ function App() {
     };
     useEffect(() => {
         refresh();
+        getStatusApi();
     }, []);
 
     const onPlayListChange = (arr: string[]) => {
-        if (!playListRef.current) return;
+        if (!playListRef.current || !arr.length) return;
         const v = arr[0];
         setPlayListSelected(arr ?? []);
         const item = playListRef.current.find(i => i.pid === v)!;
@@ -234,7 +247,7 @@ function App() {
             return;
         }
 
-        actionRemote(playListSelected[0], 'start', deviceSelected[0]);
+        actionRemote(playListSelected[0], 'start', deviceSelected[0], playModeSelected[0]);
     };
 
     const stop = () => {
@@ -262,7 +275,9 @@ function App() {
     };
 
     const onDeviceChanged = async(arr: string[]) => {
+        if (!arr.length) return;
         setDeviceSelected(arr);
+        setDeviceChooserVisible(false);
         if (arr.length) {
             const d = await getVolumeApi(arr[0]);
             if (d?.ok) {
@@ -281,24 +296,77 @@ function App() {
         _setVolumeApi(newV);
     };
 
+    const nextSong = () => {
+        nextSongApi(deviceSelected[0]);
+    };
+
+    const prevSong = () => {
+        prevSongApi(deviceSelected[0]);
+    };
+
+    const [playModeSelected, setPlayModeSelected] = useState<number[]>([0]);
+
+    const onPlayModeChanged = (arr: number[]) => {
+        if (!arr.length) return;
+        setPlayModeSelected(arr);
+        changePlayModeApi(deviceSelected[0], arr[0]);
+    };
+
+    const playModeOptions = [{
+        label: '顺序播放',
+        value: 0,
+    }, {
+        label: '单曲循环',
+        value: 1,
+    }, {
+        label: '列表循环',
+        value: 2,
+    }, {
+        label: '乱序播放',
+        value: 3,
+    }];
+
+    const [deviceChooserVisible, setDeviceChooserVisible] = useState(false);
 
     return (
         <>
             <PullToRefresh
                 onRefresh={refresh}
             >
-                <Card title='设备选择'>
-                    <Selector
-                        value={deviceSelected}
-                        options={devices}
-                        onChange={(arr) => onDeviceChanged(arr)}
-                    />
-                </Card>
-                <Card title='播放列表选择'>
+                <FloatingBubble
+                    axis='xy'
+                    magnetic='x'
+                    style={{
+                        '--initial-position-bottom': '24px',
+                        '--initial-position-right': '24px',
+                        '--edge-distance': '24px',
+                    }}
+                >
+                    <MovieOutline fontSize={32} onClick={() => setDeviceChooserVisible(true)} />
+                </FloatingBubble>
+                <Popup
+                    visible={deviceChooserVisible}
+                    onMaskClick={() => {
+                        setDeviceChooserVisible(false);
+                    }}
+                    bodyStyle={{
+                        borderTopLeftRadius: '8px',
+                        borderTopRightRadius: '8px',
+                        minHeight: '20vh',
+                    }}
+                >
+                    <Card title='设备选择'>
+                        <Selector
+                            value={deviceSelected}
+                            options={devices}
+                            onChange={(arr) => onDeviceChanged(arr)}
+                        />
+                    </Card>
+                </Popup>
+
+                <Card title='播放列表选择' extra={<Button size='small' onClick={addPlayList}>创建播放列表</Button>}>
                     <Space block direction='vertical'>
-                        <Space block direction='vertical'>
-                            <Button color='primary' block onClick={addPlayList}>创建播放列表</Button>
-                        </Space>
+
                         <Selector
                             value={playListSelected}
                             options={playlist}
@@ -316,15 +384,26 @@ function App() {
                 {
                     deviceSelected.length > 0 ? <>
                         <Card title='执行操作'>
-                            <Space wrap block direction='vertical'>
+                            <Space wrap block direction='horizontal'>
+                                <Selector
+                                    value={playModeSelected}
+                                    options={playModeOptions}
+                                    onChange={(arr) => onPlayModeChanged(arr)}
+                                />
                                 {
                                     playListSelected.length > 0 ?
-                                        <Button block onClick={play}><PlayOutline />播放</Button> : null
+                                        <Button onClick={play}><PlayOutline />播放</Button> : null
                                 }
-                                <Button block onClick={stop}><StopOutline />停止</Button>
-                                <AutoCenter>当前音量：{volume}</AutoCenter>
-                                <Button block onClick={addVolume}><SoundMuteOutline />音量增</Button>
-                                <Button block onClick={subVolume}><SoundOutline />音量减</Button>
+                                <Button onClick={stop}><StopOutline />停止</Button>
+                                <Button onClick={prevSong}><SoundMuteOutline />上一曲</Button>
+                                <Button onClick={nextSong}><SoundOutline />下一曲</Button>
+                                <Space wrap block align='center'>
+                                    <AutoCenter>当前音量：{volume}</AutoCenter>
+                                    <Button onClick={addVolume}><SoundMuteOutline />音量增</Button>
+                                    <Button onClick={subVolume}><SoundOutline />音量减</Button>
+                                </Space>
+
+
                             </Space>
 
                         </Card>

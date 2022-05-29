@@ -1,6 +1,9 @@
 package utils
 
-import "math/rand"
+import (
+	"math/rand"
+	"time"
+)
 
 func Some[T interface{}](slice []T, has func(T) bool) bool {
 	for _, item := range slice {
@@ -69,6 +72,16 @@ func Find[T interface{}](slice *[]T, find func(T) bool) *T {
 	return nil
 }
 
+func FindIndex[T interface{}](slice *[]T, find func(T) bool) int {
+	for idx, item := range *slice {
+		ok := find(item)
+		if ok {
+			return idx
+		}
+	}
+	return -1
+}
+
 func Map[T interface{}, O interface{}](slice *[]T, mapFunc func(T) O) *[]O {
 	var newSlice []O
 
@@ -80,6 +93,7 @@ func Map[T interface{}, O interface{}](slice *[]T, mapFunc func(T) O) *[]O {
 }
 
 func Shuffle[T interface{}](slice *[]T) {
+	rand.Seed(time.Now().Unix())
 	for i := range *slice {
 		j := rand.Intn(i + 1)
 		(*slice)[i], (*slice)[j] = (*slice)[j], (*slice)[i]

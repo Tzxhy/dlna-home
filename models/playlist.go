@@ -106,6 +106,6 @@ func GetPlayListItems(pid string) *[]AudioItem {
 	var items []AudioItem
 	DB.Where(&AudioItem{
 		PlayListItemID: pid,
-	}).Find(&items)
+	}).Find(&items).Order("create_date desc")
 	return &items
 }

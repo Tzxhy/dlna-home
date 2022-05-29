@@ -4,14 +4,17 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"sync"
 	"time"
 
+	"gitee.com/tzxhy/dlna-home/constants"
 	"gitee.com/tzxhy/dlna-home/devices"
 	"gitee.com/tzxhy/dlna-home/httphandlers"
 	"gitee.com/tzxhy/dlna-home/models"
+	"gitee.com/tzxhy/dlna-home/share"
 	"gitee.com/tzxhy/dlna-home/soapcalls"
 	"gitee.com/tzxhy/dlna-home/utils"
 	"github.com/gin-gonic/gin"
@@ -77,7 +80,7 @@ func GetDeviceVolume(c *gin.Context) {
 
 	rendererUrl := getDeviceVolumeReq.RendererUrl
 
-	tv, ok := serverMap[rendererUrl]
+	tv, ok := share.TvDataMap[rendererUrl]
 	if ok {
 		val, err := tv.GetVolumeSoapCall()
 		if err != nil {
@@ -109,7 +112,7 @@ func SetDeviceVolume(c *gin.Context) {
 
 	rendererUrl := setDeviceVolumeReq.RendererUrl
 
-	tv, ok := serverMap[rendererUrl]
+	tv, ok := share.TvDataMap[rendererUrl]
 	if ok {
 		l := strconv.Itoa(int(setDeviceVolumeReq.Level))
 		err := tv.SetVolumeSoapCall(l)
@@ -169,14 +172,48 @@ func SetPlayList(c *gin.Context) {
 	})
 }
 
+type StatusRespItem struct {
+	Status      string `json:"status"`
+	RendererUrl string `json:"renderer_url"`
+	CurrentUrl  string `json:"current_url"`
+	Name        string `json:"name"`
+}
+type StatusResp struct {
+	Data map[string]StatusRespItem `json:"data"`
+}
+
+func GetStatus(c *gin.Context) {
+	var ret = &StatusResp{}
+	ret.Data = make(map[string]StatusRespItem)
+	for rendererUrl, value := range share.TvDataMap {
+		var url = ""
+		var name = ""
+		if value.CurrentIdx < 0 {
+		} else if value.PlayMode == constants.PLAY_MODE_RANDOM {
+			url = value.PlayListTempUrls[value.CurrentIdx].Url
+			name = value.PlayListTempUrls[value.CurrentIdx].Name
+		} else {
+			url = value.PlayListUrls[value.CurrentIdx].Url
+			name = value.PlayListUrls[value.CurrentIdx].Name
+		}
+
+		ret.Data[rendererUrl] = StatusRespItem{
+			value.Status,
+			value.RenderingControlURL,
+			url,
+			name,
+		}
+	}
+
+	c.JSON(http.StatusOK, &ret)
+}
+
 type ActionReq struct {
-	// start, play, stop, pause
-	ActionName string `json:"action_name" binding:"required"`
-	// 播放列表id
-	Pid string `json:"pid"`
-	// 循环模式
-	CycleMode   uint8  `json:"cycle_mode"`
-	RendererUrl string `json:"renderer_url" binding:"required"`
+	ActionName  string `json:"action_name" binding:"required"`  // start, play, stop, pause, next, changePlayMode, jump
+	Pid         string `json:"pid"`                             // 播放列表id
+	PlayMode    uint8  `json:"play_mode"`                       // 默认乱序
+	TargetIdx   int16  `json:"target_idx"`                      // 要播放的文件的索引
+	RendererUrl string `json:"renderer_url" binding:"required"` // 播放器地址
 }
 
 // 执行操作
@@ -195,6 +232,71 @@ func Action(c *gin.Context) {
 		pause(actionReq)
 	} else if actionReq.ActionName == "play" {
 		play(actionReq)
+	} else if actionReq.ActionName == "next" {
+		next(actionReq)
+	} else if actionReq.ActionName == "previous" {
+		previous(actionReq)
+	} else if actionReq.ActionName == "changePlayMode" {
+		changeMode(actionReq)
+	} else if actionReq.ActionName == "jump" {
+		jump(actionReq)
+	}
+}
+func jump(actionReq ActionReq) { // 跳到指定歌曲
+	rendererUrl := actionReq.RendererUrl
+
+	tv, ok := share.TvDataMap[rendererUrl]
+	if ok {
+		tv.CurrentIdx = actionReq.TargetIdx - 1
+		if tv.CurrentIdx < -1 {
+			tv.CurrentIdx = -1
+		}
+		tv.SendtoTV("Play1")
+	}
+}
+
+func next(actionReq ActionReq) {
+	rendererUrl := actionReq.RendererUrl
+
+	tv, ok := share.TvDataMap[rendererUrl]
+	if ok {
+		tv.SendtoTV("Play1")
+	}
+}
+
+func previous(actionReq ActionReq) {
+	rendererUrl := actionReq.RendererUrl
+
+	tv, ok := share.TvDataMap[rendererUrl]
+	if ok {
+		tv.CurrentIdx -= 2
+		if tv.CurrentIdx < -1 {
+			tv.CurrentIdx = -1
+		}
+		tv.SendtoTV("Play1")
+	}
+}
+func changeMode(actionReq ActionReq) {
+	rendererUrl := actionReq.RendererUrl
+
+	tv, ok := share.TvDataMap[rendererUrl]
+	if ok && tv.PlayMode != actionReq.PlayMode {
+		// 当前是随机的话，切换到其他的，那么设置CurrentIdx 去完成接续
+		if tv.PlayMode == constants.PLAY_MODE_RANDOM {
+			currentItem := tv.PlayListTempUrls[tv.CurrentIdx]
+			newIdx := utils.FindIndex(&tv.PlayListUrls, func(item models.AudioItem) bool {
+				return item.Aid == currentItem.Aid
+			})
+			tv.CurrentIdx = int16(newIdx)
+		}
+		log.Println("change play mode: ", actionReq.PlayMode)
+		tv.PlayMode = actionReq.PlayMode
+		if actionReq.PlayMode == constants.PLAY_MODE_RANDOM {
+			var playListTempUrls = make([]models.AudioItem, len(tv.PlayListUrls))
+			copy(playListTempUrls, tv.PlayListUrls)
+			utils.Shuffle(&playListTempUrls)
+			tv.PlayListTempUrls = playListTempUrls
+		}
 	}
 }
 func check(err error) {
@@ -204,54 +306,58 @@ func check(err error) {
 	}
 }
 
-var serverMap = make(map[string]*(soapcalls.TVPayload), 1)
-var songListMap = make(map[string]*[]models.AudioItem, 0)
+var hasCreateMediaServer = false
+var globalWhereToListen = ""
 var create = func(actionReq ActionReq, rendererUrl string) *soapcalls.TVPayload {
 
 	upnpServicesURLs, err := soapcalls.DMRExtractor(actionReq.RendererUrl)
 	check(err)
-	whereToListen, err := utils.URLtoListenIPandPort(actionReq.RendererUrl)
-	check(err)
+	if globalWhereToListen == "" {
+		globalWhereToListen, _ = utils.URLtoListenIPandPort(actionReq.RendererUrl)
+		if !hasCreateMediaServer {
+			check(err)
+		}
+	}
+
 	callbackPath, err := utils.RandomString()
 	check(err)
 	tvdata := &soapcalls.TVPayload{
 		ControlURL:                  upnpServicesURLs.AVTransportControlURL,
 		EventURL:                    upnpServicesURLs.AVTransportEventSubURL,
 		RenderingControlURL:         upnpServicesURLs.RenderingControlURL,
-		CallbackURL:                 "http://" + whereToListen + "/" + callbackPath,
-		MediaURL:                    "http://" + whereToListen + "/" + "media",
-		SubtitlesURL:                "http://" + whereToListen + "/",
+		CallbackURL:                 "http://" + globalWhereToListen + "/" + callbackPath,
+		MediaURL:                    "http://" + globalWhereToListen + "/" + "media?renderer_url=" + url.QueryEscape(actionReq.RendererUrl),
+		SubtitlesURL:                "http://" + globalWhereToListen + "/",
 		MediaType:                   "",
 		CurrentTimers:               make(map[string]*time.Timer),
 		MediaRenderersStates:        make(map[string]*soapcalls.States),
 		InitialMediaRenderersStates: make(map[string]bool),
 		RWMutex:                     &sync.RWMutex{},
 		Transcode:                   false,
+		CurrentIdx:                  -1,
 	}
-	serverMap[rendererUrl] = tvdata
+	share.TvDataMap[rendererUrl] = tvdata
 
-	s := httphandlers.NewServer(whereToListen)
-	serverStarted := make(chan struct{})
+	if !hasCreateMediaServer {
+		hasCreateMediaServer = true
+		s := httphandlers.NewServer(globalWhereToListen)
+		serverStarted := make(chan struct{})
 
-	// We pass the tvdata here as we need the callback handlers to be able to react
-	// to the different media renderer states.
-	go func() {
-		err := s.StartServer(serverStarted, tvdata, rendererUrl)
-		check(err)
-	}()
-	// // Wait for HTTP server to properly initialize
-	<-serverStarted
-	log.Print("after")
+		go func() {
+			err := s.StartServer(serverStarted, tvdata)
+			check(err)
+		}()
+		<-serverStarted
+	}
+
 	return tvdata
 }
 
 func startPlayPush(actionReq ActionReq) {
 	rendererUrl := actionReq.RendererUrl
 
-	tv, ok := serverMap[rendererUrl]
+	tv, ok := share.TvDataMap[rendererUrl]
 	list := models.GetPlayListItems(actionReq.Pid)
-	utils.Shuffle(list)
-	songListMap[rendererUrl] = list
 
 	if ok { // 已有，直接操作
 		tv.PlayListUrls = *list
@@ -259,10 +365,12 @@ func startPlayPush(actionReq ActionReq) {
 	} else {
 		tvdata := create(actionReq, rendererUrl)
 		tvdata.PlayListUrls = *list
+		changeMode(actionReq)
 		if err := tvdata.SendtoTV("Play1"); err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
+		tvdata.Status = "play"
 	}
 
 }
@@ -270,16 +378,17 @@ func startPlayPush(actionReq ActionReq) {
 func stopPlay(actionReq ActionReq) {
 	rendererUrl := actionReq.RendererUrl
 
-	tv, ok := serverMap[rendererUrl]
+	tv, ok := share.TvDataMap[rendererUrl]
 	if ok {
 		tv.SendtoTV("Stop")
+		tv.Status = "stop"
 	}
 }
 
 func play(actionReq ActionReq) {
 	rendererUrl := actionReq.RendererUrl
 
-	tv, ok := serverMap[rendererUrl]
+	tv, ok := share.TvDataMap[rendererUrl]
 	if ok {
 		tv.AVTransportActionSoapCall("Play")
 	}
@@ -288,7 +397,7 @@ func play(actionReq ActionReq) {
 func pause(actionReq ActionReq) {
 	rendererUrl := actionReq.RendererUrl
 
-	tv, ok := serverMap[rendererUrl]
+	tv, ok := share.TvDataMap[rendererUrl]
 	if ok {
 		tv.AVTransportActionSoapCall("Pause")
 	}
