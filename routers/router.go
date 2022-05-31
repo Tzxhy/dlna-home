@@ -21,6 +21,7 @@ func InitRouter() *gin.Engine {
 	v1.POST("update-playlist", controllers.SetPlayList)
 
 	v1.POST("action", controllers.Action)
+	v1.POST("start-one", controllers.StartOne)
 	v1.GET("volume", controllers.GetDeviceVolume)
 	v1.POST("volume", controllers.SetDeviceVolume)
 

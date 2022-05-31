@@ -8,7 +8,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "antd-mobile": "^5.12.6",
+    "@emotion/react": "^11.9.0",
+    "@emotion/styled": "^11.8.1",
+    "@mui/icons-material": "^5.8.0",
+    "@mui/lab": "^5.0.0-alpha.83",
+    "@mui/material": "^5.8.1",
+    "@mui/system": "^5.8.1",
     "antd-mobile-icons": "^0.2.2",
     "axios": "^0.27.2",
     "react": "^18.0.0",

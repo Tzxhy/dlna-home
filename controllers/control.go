@@ -20,6 +20,39 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type StartOneReq struct {
+	Url         string `json:"url" form:"url" binding:"required"`
+	RendererUrl string `json:"renderer_url" form:"renderer_url" binding:"required"`
+}
+
+func StartOne(c *gin.Context) {
+	var actionReq StartOneReq
+	if c.ShouldBind(&actionReq) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+
+	upnpServicesURLs, err := soapcalls.DMRExtractor(actionReq.RendererUrl)
+	check(err)
+
+	tvdata := &soapcalls.TVPayload{
+		ControlURL:                  upnpServicesURLs.AVTransportControlURL,
+		EventURL:                    upnpServicesURLs.AVTransportEventSubURL,
+		RenderingControlURL:         upnpServicesURLs.RenderingControlURL,
+		CallbackURL:                 "",
+		MediaURL:                    actionReq.Url,
+		SubtitlesURL:                "",
+		MediaType:                   "",
+		CurrentTimers:               make(map[string]*time.Timer),
+		MediaRenderersStates:        make(map[string]*soapcalls.States),
+		InitialMediaRenderersStates: make(map[string]bool),
+		RWMutex:                     &sync.RWMutex{},
+		Transcode:                   false,
+		CurrentIdx:                  -1,
+	}
+	tvdata.SendtoTV("Play1")
+}
+
 func GetDeviceList(c *gin.Context) {
 	deviceList, err := devices.LoadSSDPServices(1)
 	if err != nil {
