@@ -169,7 +169,7 @@ export default function Playlist() {
     const [newPlayListName, setNewPlayListName] = useState('');
     const [newPlayListList, setNewPlayListList] = useState('');
 
-    const playListDetail = (<>
+    const playListDetail = (currentViewPlayList: string) => (<>
         <TabHeader
             showBack
             onClickBack={(e) => {
@@ -302,7 +302,7 @@ export default function Playlist() {
     </>);
     return <Container>
         {
-            currentViewPlayList ? playListDetail : playlist
+            currentViewPlayList ? playListDetail(currentViewPlayList) : playlist
         }
     </Container>;
 }
