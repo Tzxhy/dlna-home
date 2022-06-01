@@ -29,6 +29,7 @@ import {
 import {
     actionRemote,
     createPlayList,
+    deletePlayListApi,
     getPlayList,
     renamePlayList,
     updatePlayListApi,
@@ -164,10 +165,6 @@ export default function Playlist() {
     };
 
     const [showMoreActionAnchor, setShowMoreActionAnchor] = useState<HTMLElement | null>(null);
-    const [showMoreActionDialog, setShowMoreActionDialog] = useState(false);
-    const currentEditMore = useRef(0); // 0, 重命名；1，全量；2，增量
-    const [newPlayListName, setNewPlayListName] = useState('');
-    const [newPlayListList, setNewPlayListList] = useState('');
 
     const playListDetail = (currentViewPlayList: string) => (<>
         <TabHeader
@@ -192,68 +189,75 @@ export default function Playlist() {
                     }}
                 >
                     <MenuItem onClick={() => {
-                        currentEditMore.current = 0;
-                        setNewPlayListName(getTargetPlayItem(currentViewPlayList).name);
-                        setShowMoreActionDialog(true);
                         setShowMoreActionAnchor(null);
+                        let newPlayListName = getTargetPlayItem(currentViewPlayList).name;
+
+                        showDialog({
+                            title: '重命名',
+                            body: <TextField
+                                autoFocus
+                                margin="dense"
+                                label="新的名称"
+                                type="text"
+                                defaultValue={newPlayListName}
+                                onChange={(e) => newPlayListName = e.target.value}
+                                fullWidth
+                                variant="standard"
+                            />,
+                            onOk: async (close) => {
+                                if (!newPlayListName) return;
+                                await renamePlayList(currentViewPlayList, newPlayListName);
+                                refreshPlayList();
+                                close();
+                            },
+                        });
                     }}>重命名</MenuItem>
                     <MenuItem onClick={() => {
+                        setShowMoreActionAnchor(null);
                         showDialog({
                             title: '确认删除' + `"${getTargetPlayItem(currentViewPlayList).name}"?`,
-                            onCancel: () => {
-                                console.log('222: ', 222);
-                            },
-                            onOk: () => {
-                                console.log('111: ', 111);
+                            onOk: async (close) => {
+                                await deletePlayListApi(currentViewPlayList);
+                                close();
+                                setCurrentViewPlayList('');
+                                setTimeout(() => {
+                                    refreshPlayList();
+                                });
                             },
                         });
                     }}>删除</MenuItem>
                     <MenuItem onClick={() => {
-                        currentEditMore.current = 1;
-                        setNewPlayListName(getTargetPlayItem(currentViewPlayList).name);
-                        setNewPlayListList(JSON.stringify(getTargetPlayItem(currentViewPlayList).list, null, 4));
-                        setShowMoreActionDialog(true);
                         setShowMoreActionAnchor(null);
-                    }}>替换更新</MenuItem>
-                    <MenuItem >增量添加</MenuItem>
-                </Menu>
-                <Dialog open={showMoreActionDialog} onClose={() => setShowMoreActionDialog(false)}>
-                    <DialogTitle>修改名称</DialogTitle>
-                    <DialogContent>
-                        <TextField
-                            autoFocus
-                            margin="dense"
-                            label="新的名称"
-                            type="text"
-                            defaultValue={newPlayListName}
-                            onChange={(e) => setNewPlayListName(e.target.value)}
-                            fullWidth
-                            variant="standard"
-                        />
-                        {
-                            currentEditMore.current !== 0 ? <TextField
-                                autoFocus
-                                margin="dense"
-                                label="列表"
-                                type="text"
-                                defaultValue={newPlayListList}
-                                multiline
-                                maxRows={4}
-                                onChange={(e) => setNewPlayListList(e.target.value)}
-                                fullWidth
-                                variant="standard"
-                            /> : null
-                        }
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setShowMoreActionDialog(false)}>取消</Button>
-                        <Button onClick={async () => {
-                            if (currentEditMore.current === 0) {
-                                if (!newPlayListName) return;
-                                await renamePlayList(currentViewPlayList, newPlayListName);
-                                refreshPlayList();
-                                setShowMoreActionDialog(false);
-                            } else if (currentEditMore.current === 1) {
+
+                        let newPlayListName = '';
+                        let newPlayListList = '';
+
+                        showDialog({
+                            title: '替换更新',
+                            body: <>
+                                <TextField
+                                    autoFocus
+                                    margin="dense"
+                                    label="名称"
+                                    type="text"
+                                    defaultValue={newPlayListName}
+                                    onChange={(e) => newPlayListName = e.target.value}
+                                    fullWidth
+                                    variant="standard"
+                                />
+                                <TextField
+                                    margin="dense"
+                                    label="列表"
+                                    type="text"
+                                    defaultValue={newPlayListList}
+                                    multiline
+                                    maxRows={4}
+                                    onChange={(e) => newPlayListList = e.target.value}
+                                    fullWidth
+                                    variant="standard"
+                                />
+                            </>,
+                            onOk: async (close) => {
                                 if (!newPlayListName || !newPlayListList) return;
                                 let listObj: {name: string; url: string}[];
                                 try {
@@ -261,16 +265,14 @@ export default function Playlist() {
                                 } catch(e) {
                                     return;
                                 }
-
                                 await updatePlayListApi(currentViewPlayList, newPlayListName, listObj);
-
-                                setShowAddPlayListDialog(false);
                                 refreshPlayList();
-                                setShowMoreActionDialog(false);
-                            }
-                        }}>确定</Button>
-                    </DialogActions>
-                </Dialog>
+                                close();
+                            },
+                        });
+                    }}>替换更新</MenuItem>
+                    <MenuItem >增量添加</MenuItem>
+                </Menu>
             </>}
         />
         <Button

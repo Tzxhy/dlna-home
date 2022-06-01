@@ -60,7 +60,7 @@ func StartOne(c *gin.Context) {
 }
 
 func GetDeviceList(c *gin.Context) {
-	deviceList, err := devices.LoadSSDPServices(3)
+	deviceList, err := devices.LoadSSDPServices(2)
 	if err != nil {
 		var empty = make(map[string]string)
 		c.JSON(http.StatusOK, &gin.H{

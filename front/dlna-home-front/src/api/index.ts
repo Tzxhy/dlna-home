@@ -62,3 +62,9 @@ export async function actionRemote(
         play_mode,
     }).then(d => d.data);
 }
+
+export async function deletePlayListApi(pid: string): Promise<void> {
+    await axios.post<any>('/api/v1/delete-playlist', {
+        pid,
+    }).then(d => d.data);
+}
