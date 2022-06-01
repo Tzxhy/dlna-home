@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"log"
 	"net/url"
 	"regexp"
 	"strings"
@@ -234,7 +235,7 @@ func setAVTransportSoapBuild(mediaURL, mediaType, subtitleURL string) ([]byte, e
 		return nil, fmt.Errorf("setAVTransportSoapBuild regex compile error: %w", err)
 	}
 	mediaTitle = re.ReplaceAllString(mediaTitle, "")
-
+	log.Println("mediaURL: ", mediaURL)
 	l := didLLite{
 		XMLName:    xml.Name{},
 		SchemaDIDL: "urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/",

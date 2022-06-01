@@ -19,6 +19,7 @@ func InitRouter() *gin.Engine {
 	v1.POST("create-playlist", controllers.CreatePlayList)
 
 	v1.POST("update-playlist", controllers.SetPlayList)
+	v1.POST("rename-playlist", controllers.RenamePlayList)
 
 	v1.POST("action", controllers.Action)
 	v1.POST("start-one", controllers.StartOne)

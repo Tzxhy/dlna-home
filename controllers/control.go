@@ -50,11 +50,17 @@ func StartOne(c *gin.Context) {
 		Transcode:                   false,
 		CurrentIdx:                  -1,
 	}
-	tvdata.SendtoTV("Play1")
+	err = tvdata.SendtoTV("Play1")
+	if err != nil {
+		log.Println("err: ", err)
+	}
+	c.JSON(http.StatusOK, &gin.H{
+		"ok": err == nil,
+	})
 }
 
 func GetDeviceList(c *gin.Context) {
-	deviceList, err := devices.LoadSSDPServices(1)
+	deviceList, err := devices.LoadSSDPServices(3)
 	if err != nil {
 		var empty = make(map[string]string)
 		c.JSON(http.StatusOK, &gin.H{
@@ -75,6 +81,15 @@ type PlayListItem struct {
 func GetPlayList(c *gin.Context) {
 	list, _ := models.GetPlayList()
 	var newList []PlayListItem
+	var allPlayListItem = models.PlayListItem{
+		Pid:        "ALL",
+		Name:       "所有",
+		CreateDate: 0,
+	}
+	newList = append(newList, PlayListItem{
+		allPlayListItem,
+		make([]models.AudioItem, 0),
+	})
 	for _, item := range *list {
 		items := models.GetPlayListItems(item.Pid)
 		newList = append(newList, PlayListItem{
@@ -181,6 +196,23 @@ func CreatePlayList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, &gin.H{
 		"err": err.Error(),
+	})
+}
+
+type RenamePlayListReq struct {
+	Pid  string `json:"pid" binding:"required"`
+	Name string `json:"new_name" form:"new_name" binding:"required"`
+}
+
+func RenamePlayList(c *gin.Context) {
+	var renamePlayListReq RenamePlayListReq
+	if c.ShouldBind(&renamePlayListReq) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+	models.RenamePlayList(renamePlayListReq.Pid, renamePlayListReq.Name)
+	c.JSON(http.StatusOK, &gin.H{
+		"ok": true,
 	})
 }
 
