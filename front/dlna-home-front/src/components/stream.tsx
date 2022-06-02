@@ -1,10 +1,7 @@
 import PlayCircleFilledWhiteIcon from '@mui/icons-material/PlayCircleFilledWhite';
 import {
-    Alert,
-    AlertColor,
     Box,
     IconButton,
-    Snackbar,
     TextField,
 } from '@mui/material';
 import {
@@ -12,13 +9,15 @@ import {
 } from '@mui/system';
 import {
     useContext,
-    useRef,
     useState,
 } from 'react';
 
 import {
     startStream,
 } from '../api';
+import {
+    showSnackbar,
+} from '../plugin/snackbar.tsx';
 import AppContext from '../store';
 import TabHeader from './tabHeader';
 
@@ -28,45 +27,30 @@ export default function Stream() {
     const store = ctx[0];
 
     const [url, setUrl] = useState('');
-    const [showBar, setShowBar] = useState(false);
-    const barRef = useRef<{
-        type: AlertColor;
-        tips: string;
-    }>({
-        type: 'error',
-        tips: '',
-    });
 
     const clickPlay = async () => {
         if (!store.currentDevice.url) {
-            barRef.current = {
+            showSnackbar({
                 type: 'error',
-                tips: '请先选择设备',
-            };
-            setShowBar(true);
+                title: '请先选择设备',
+                timeout: 3000,
+            });
             return;
         }
         if (!url) {
-            barRef.current = {
+            showSnackbar({
                 type: 'error',
-                tips: '请填入url',
-            };
-            setShowBar(true);
+                title: '请填入url',
+                timeout: 3000,
+            });
             return;
         }
         const ok = await startStream(store.currentDevice.url, url);
-        setShowBar(true);
-        if (ok) {
-            barRef.current = {
-                type: 'success',
-                tips: '请求成功',
-            };
-        } else {
-            barRef.current = {
-                type: 'error',
-                tips: '请求失败',
-            };
-        }
+        showSnackbar({
+            type: ok ? 'success' : 'error',
+            title: ok ? '请求成功' : '请求失败',
+            timeout: 3000,
+        });
     };
 
     return <Container>
@@ -93,18 +77,5 @@ export default function Stream() {
                 flex: 1,
             }} onClick={clickPlay}><PlayCircleFilledWhiteIcon />播放</IconButton>
         </Box>
-        <Snackbar
-            open={showBar}
-            autoHideDuration={6000}
-            onClose={() => setShowBar(false)}
-        >
-            <Alert onClose={() => setShowBar(false)} severity={barRef.current.type} sx={{
-                width: '100%',
-            }}>
-                {
-                    barRef.current.tips
-                }
-            </Alert>
-        </Snackbar>
     </Container>;
 }

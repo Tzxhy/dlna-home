@@ -3,6 +3,7 @@ import './index.css';
 import {
     createTheme, ThemeProvider,
 } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import React, {
     useMemo,
     useReducer,
@@ -13,16 +14,22 @@ import App from './App';
 import {
     ColorModeContext,
 } from './context/theme';
+import {
+    MyDialogAdapter,
+} from './plugin/dialog.tsx';
+import {
+    MySnackBarAdapter,
+} from './plugin/snackbar.tsx';
 import AppContext, {
     defaultStore,
     reducer,
 } from './store';
 
-
 function Main() {
 
     const [state, dispatch] = useReducer(reducer, defaultStore);
-    const [mode, setMode] = React.useState<'light' | 'dark'>('light');
+    const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
+    const [mode, setMode] = React.useState<'light' | 'dark'>(prefersDarkMode ? 'dark' : 'light');
     const colorMode = React.useMemo(
         () => ({
             toggleColorMode: () => {
@@ -36,7 +43,6 @@ function Main() {
             createTheme({
                 palette: {
                     mode,
-
                 },
                 breakpoints: {
                     values: {
@@ -55,6 +61,8 @@ function Main() {
             <ThemeProvider theme={theme}>
                 <AppContext.Provider value={[state, dispatch]}>
                     <App />
+                    <MyDialogAdapter />
+                    <MySnackBarAdapter />
                 </AppContext.Provider>
             </ThemeProvider>
         </ColorModeContext.Provider>

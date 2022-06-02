@@ -68,3 +68,17 @@ export async function deletePlayListApi(pid: string): Promise<void> {
         pid,
     }).then(d => d.data);
 }
+export async function deleteSingleResourceApi(aid: string): Promise<void> {
+    await axios.post<any>('/api/v1/delete-single-resource', {
+        aid,
+    }).then(d => d.data);
+}
+
+export async function startPlayResource(renderer_url: string, pid: string, aid: string): Promise<void> {
+    await axios.post<any>('/api/v1/action', {
+        action_name: 'jump',
+        pid,
+        aid,
+        renderer_url,
+    }).then(d => d.data);
+}

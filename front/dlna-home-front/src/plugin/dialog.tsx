@@ -1,64 +1,71 @@
 import {
     Button,Dialog, DialogActions, DialogContent, DialogTitle,
 } from '@mui/material';
-import ReactDOM from 'react-dom/client';
+import {
+    useState,
+} from 'react';
 
 
 type ElementDialogConf = {
+    show: boolean;
     title?: string;
-    body?: React.ReactElement;
+    body?: React.ReactElement | (() => React.ReactElement);
     onOk?: () => void;
     onCancel?: () => void;
+	showBtns?: boolean;
 }
 function MyDialog(props: ElementDialogConf) {
-    return <Dialog open={true} onClose={props.onCancel}>
+    const showBtns = props.showBtns ?? true;
+
+    return <Dialog open={props.show} onClose={props.onCancel}>
         {
             props.title ? <DialogTitle>{props.title}</DialogTitle> : null
         }
         <DialogContent>
             {
-                props.body ? props.body : null
+                props.body ? (typeof props.body === 'function' ? props.body() : props.body) : null
             }
         </DialogContent>
-        <DialogActions>
-        	<Button onClick={props.onCancel}>取消</Button>
-            <Button onClick={props.onOk}>确定</Button>
-        </DialogActions>
+        {
+            showBtns ? <DialogActions>
+                <Button onClick={props.onCancel}>取消</Button>
+                <Button onClick={props.onOk}>确定</Button>
+            </DialogActions> : null
+        }
     </Dialog>;
 }
 
+let close: () => void;
+let show: () => void;
+let props: DialogConf;
+export function MyDialogAdapter() {
+    const [_show, setShow] = useState(false);
+    close = () => setShow(false);
+    show = () => setShow(true);
+    return <MyDialog show={_show} {...props} />;
+}
 
 type DialogConf = {
-    title?: string;
-    body?: React.ReactElement;
+    title?: React.ReactElement;
+    body?: React.ReactElement | (() => React.ReactElement);
     onOk?: (callback: ()=>void) => void;
     onCancel?: () => void;
+	showBtns?: boolean;
 }
 export function showDialog(params: DialogConf) {
-    const div = document.createElement('div');
-    const root = ReactDOM.createRoot(div);
-    const onClose = () => {
-        const cb = () => {
-
-            root.unmount();
-            div.remove();
-        };
-        params.onCancel?.(cb);
-        root.unmount();
-        div.remove();
-
+    props = {
+        ...params,
+        onCancel: () => {
+            params.onCancel?.();
+            close();
+        },
+        onOk: () => {
+            const cb = () => {
+                close();
+            };
+            params.onOk?.(cb);
+        },
     };
-
-    const onOk = () => {
-        const cb = () => {
-
-            root.unmount();
-            div.remove();
-        };
-        params.onOk?.(cb);
-    };
-    root.render(
-        <MyDialog {...params} onCancel={onClose} onOk={onOk} />
-    );
-    document.body.appendChild(div);
+    show();
+    return close;
 }

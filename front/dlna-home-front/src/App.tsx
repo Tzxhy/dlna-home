@@ -1,18 +1,17 @@
 
 import './App.css';
 
-import CastConnectedRoundedIcon from '@mui/icons-material/CastConnectedRounded';
+import ConnectedTvIcon from '@mui/icons-material/ConnectedTv';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import TvIcon from '@mui/icons-material/Tv';
 import {
     TabPanelProps,
 } from '@mui/lab';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import Box from '@mui/material/Box';
-import Dialog from '@mui/material/Dialog/Dialog';
-import DialogTitle from '@mui/material/DialogTitle/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -32,6 +31,9 @@ import {
 import MyAppBar from './components/appHeader';
 import Playlist from './components/playlist';
 import Stream from './components/stream';
+import {
+    showDialog,
+} from './plugin/dialog.tsx';
 import AppContext from './store';
 
 function TabPanel(props: Omit<TabPanelProps, 'value'> & {value: number; index: number;}) {
@@ -65,9 +67,33 @@ function TabPanel(props: Omit<TabPanelProps, 'value'> & {value: number; index: n
     );
 }
 
+function DeviceDialog(props: {close: () => void;}) {
+    const ctx = useContext(AppContext)[0];
+    const dispatch = useContext(AppContext)[1];
+    const currentDevice = useContext(AppContext)[0].currentDevice;
+    return <List>
+        {
+            ctx.devices.map((i) => <ListItem key={i.url} disablePadding onClick={() => {
+                dispatch({
+                    type: 'set-device',
+                    data: i,
+                });
+                setTimeout(() => {
+                    props.close();
+                }, 500);
+            }}>
+                <ListItemButton selected={i.url === currentDevice.url}>
+                    <ListItemText primary={i.name} />
+                </ListItemButton>
+            </ListItem>)
+        }
+    </List>;
+}
+
 export default function App() {
 
     const ctx = useContext(AppContext)[0];
+    const selectedDevice = !!ctx.currentDevice.url;
     const dispatch = useContext(AppContext)[1];
 
     const [tab, setTab] = useState(0);
@@ -76,27 +102,16 @@ export default function App() {
         setTab(t);
     };
 
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const open = Boolean(anchorEl);
-    const handleClickTvs = (event: MouseEvent<HTMLButtonElement>) => {
-        setAnchorEl(event.currentTarget);
-    };
-    const handleClose = (item?: {name: string; url: string;}) => {
+    const handleClickTvs = (_event: MouseEvent<HTMLButtonElement>) => {
 
-        if (item) {
-            dispatch({
-                type: 'set-device',
-                data: item,
-            });
-            setTimeout(() => {
-                setAnchorEl(null);
-            }, 500);
-        } else {
-            setAnchorEl(null);
-        }
+        const close = showDialog({
+            title: <>
+                当前设备： <IconButton onClick={refreshDeviceList}><RefreshRoundedIcon /></IconButton>
+            </>,
+            body: () => <DeviceDialog close={close} />,
+            showBtns: false,
+        });
     };
-
-    const currentDevice = useContext(AppContext)[0].currentDevice;
 
     async function refreshDeviceList() {
         const data = await getDeviceList();
@@ -165,23 +180,12 @@ export default function App() {
         }}
         onClick={handleClickTvs}
         >
-            <CastConnectedRoundedIcon fontSize='large'/>
-        </IconButton>
+            {
+                selectedDevice ? <ConnectedTvIcon fontSize='large' />
+                    : <TvIcon fontSize='large'/>
+            }
 
-        <Dialog onClose={() => handleClose()} open={open}>
-      		<DialogTitle fontSize={24}>
-                  当前设备： <IconButton onClick={refreshDeviceList}><RefreshRoundedIcon /></IconButton>
-            </DialogTitle>
-            <List>
-                {
-                    ctx.devices.map((i) => <ListItem key={i.url} disablePadding onClick={() => handleClose(i)}>
-                        <ListItemButton selected={i.url === currentDevice.url}>
-					        <ListItemText primary={i.name} />
-                        </ListItemButton>
-				  </ListItem>)
-                }
-            </List>
-        </Dialog>
+        </IconButton>
 
     </Box>;
 }

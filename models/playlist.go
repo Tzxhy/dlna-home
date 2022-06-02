@@ -102,10 +102,26 @@ func DeletePlayList(pid string) bool {
 	return err == nil
 }
 
+const ALL_ITEMS_PID = "ALL"
+
 func GetPlayListItems(pid string) *[]AudioItem {
+	if pid == ALL_ITEMS_PID {
+		return GetAllPlayListItems()
+	}
 	var items []AudioItem
 	DB.Where(&AudioItem{
 		PlayListItemID: pid,
 	}).Find(&items).Order("create_date desc")
 	return &items
+}
+func GetAllPlayListItems() *[]AudioItem {
+	var items []AudioItem
+	DB.Find(&items).Order("create_date desc")
+	return &items
+}
+
+func DeleteSingleResource(aid string) {
+	DB.Where(&AudioItem{
+		Aid: aid,
+	}).Delete(&AudioItem{})
 }

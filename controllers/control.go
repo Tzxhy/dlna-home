@@ -82,13 +82,13 @@ func GetPlayList(c *gin.Context) {
 	list, _ := models.GetPlayList()
 	var newList []PlayListItem
 	var allPlayListItem = models.PlayListItem{
-		Pid:        "ALL",
+		Pid:        models.ALL_ITEMS_PID,
 		Name:       "所有",
 		CreateDate: 0,
 	}
 	newList = append(newList, PlayListItem{
 		allPlayListItem,
-		make([]models.AudioItem, 0),
+		*models.GetAllPlayListItems(),
 	})
 	for _, item := range *list {
 		items := models.GetPlayListItems(item.Pid)
@@ -216,6 +216,24 @@ func RenamePlayList(c *gin.Context) {
 	})
 }
 
+type DeleteSingleResourceReq struct {
+	Aid string `json:"aid" form:"aid" binding:"required"`
+}
+
+func DeleteSingleResource(c *gin.Context) {
+	var deleteSingleResourceReq DeleteSingleResourceReq
+	if c.ShouldBind(&deleteSingleResourceReq) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+
+	models.DeleteSingleResource(deleteSingleResourceReq.Aid)
+
+	c.JSON(http.StatusOK, &gin.H{
+		"ok": true,
+	})
+}
+
 type SetPlayListReq struct {
 	Pid  string                 `json:"pid" binding:"required"`
 	Name string                 `json:"name" form:"name"`
@@ -277,7 +295,7 @@ type ActionReq struct {
 	ActionName  string `json:"action_name" binding:"required"`  // start, play, stop, pause, next, changePlayMode, jump
 	Pid         string `json:"pid"`                             // 播放列表id
 	PlayMode    uint8  `json:"play_mode"`                       // 默认乱序
-	TargetIdx   int16  `json:"target_idx"`                      // 要播放的文件的索引
+	TargetAid   string `json:"aid"`                             // 要播放的文件的aid
 	RendererUrl string `json:"renderer_url" binding:"required"` // 播放器地址
 }
 
@@ -312,7 +330,10 @@ func jump(actionReq ActionReq) { // 跳到指定歌曲
 
 	tv, ok := share.TvDataMap[rendererUrl]
 	if ok {
-		tv.CurrentIdx = actionReq.TargetIdx - 1
+		idx := utils.FindIndex(&tv.PlayListUrls, func(item models.AudioItem) bool {
+			return item.Aid == actionReq.TargetAid
+		})
+		tv.CurrentIdx = int16(idx) - 1
 		if tv.CurrentIdx < -1 {
 			tv.CurrentIdx = -1
 		}
