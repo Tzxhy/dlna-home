@@ -29,6 +29,8 @@ import {
     getDeviceList,
 } from './api';
 import MyAppBar from './components/appHeader';
+import Player from './components/player';
+import PlayerBar from './components/playerBar';
 import Playlist from './components/playlist';
 import Stream from './components/stream';
 import {
@@ -170,7 +172,7 @@ export default function App() {
         <IconButton sx={{
             position: 'fixed',
             right: (t: any) => t.spacing(2),
-            bottom: '80px',
+            bottom: '136px',
             borderRadius: '50%',
             border: 1,
             borderColor: 'divider',
@@ -186,6 +188,10 @@ export default function App() {
             }
 
         </IconButton>
+
+        <PlayerBar />
+
+        <Player />
 
     </Box>;
 }

@@ -150,6 +150,16 @@ export default function Playlist() {
             return;
         }
         await actionRemote(currentViewPlayList, 'start', store.currentDevice.url);
+        const playList = store.playList.find(i => i.pid === currentViewPlayList)!;
+
+        dispatch({
+            type: 'show-player',
+            data: {
+                currentListPid: currentViewPlayList,
+                currentItem: playList.list[0],
+                status: 'start',
+            },
+        });
     };
 
     const [showMoreActionAnchor, setShowMoreActionAnchor] = useState<HTMLElement | null>(null);
@@ -273,7 +283,9 @@ export default function Playlist() {
             color: 'text.secondary',
         }}>当前列表共有：{getTargetPlayItem(currentViewPlayList).list.length}个媒体</Typography>
 
-        <List>
+        <List sx={{
+            pb: 10,
+        }}>
             {
                 getTargetPlayItem(currentViewPlayList).list.map((i, idx) => {
                     return <Box key={i.aid} sx={{
