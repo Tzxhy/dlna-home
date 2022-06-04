@@ -21,8 +21,8 @@
 		"source.fixAll": true
 	},
 	"typescript.format.enable": false,
-	"typescript.suggest.enabled": false,
-	"typescript.validate.enable": false,
+	"typescript.suggest.enabled": true,
+	"typescript.validate.enable": true,
 	"editor.detectIndentation": false,
 	"editor.tabSize": 4,
 	"editor.insertSpaces": true

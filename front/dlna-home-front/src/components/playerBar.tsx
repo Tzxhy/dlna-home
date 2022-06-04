@@ -3,16 +3,16 @@ import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/system/Box';
 import {
-    memo,
     useContext,
-    useState,
 } from 'react';
 
 import CD from '../assets/img/cd.png';
-import AppContext from '../store/index.ts';
+import AppContext from '../store';
 export default function PlayerBar() {
     const ctx = useContext(AppContext);
     const store = ctx[0];
+
+    const dispatch = ctx[1];
 
     const showPlayer = store.player.show;
 
@@ -29,7 +29,11 @@ export default function PlayerBar() {
             bgcolor: 'background.paper',
             boxShadow: 2,
         }}>
-            <Button fullWidth>
+            <Button fullWidth onClick={() => {
+                dispatch({
+                    type: 'show-player',
+                });
+            }}>
                 <Box sx={{
                     flex: 1,
                     display: 'flex',

@@ -16,10 +16,10 @@ import {
 } from './context/theme';
 import {
     MyDialogAdapter,
-} from './plugin/dialog.tsx';
+} from './plugin/dialog';
 import {
     MySnackBarAdapter,
-} from './plugin/snackbar.tsx';
+} from './plugin/snackbar';
 import AppContext, {
     defaultStore,
     reducer,

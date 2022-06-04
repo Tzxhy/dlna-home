@@ -35,7 +35,7 @@ import Playlist from './components/playlist';
 import Stream from './components/stream';
 import {
     showDialog,
-} from './plugin/dialog.tsx';
+} from './plugin/dialog';
 import AppContext from './store';
 
 function TabPanel(props: Omit<TabPanelProps, 'value'> & {value: number; index: number;}) {

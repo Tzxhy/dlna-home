@@ -17,7 +17,7 @@ import {
 } from '../api';
 import {
     showSnackbar,
-} from '../plugin/snackbar.tsx';
+} from '../plugin/snackbar';
 import AppContext from '../store';
 import TabHeader from './tabHeader';
 

@@ -18,6 +18,7 @@ dist-ssr
 *.local
 log.log
 assets
+!front/dlna-home-front/src/assets
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

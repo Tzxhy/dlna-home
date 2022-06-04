@@ -11,18 +11,19 @@ export async function startStream(renderer_url: string, url: string): Promise<bo
         url,
     }).then(d => !!d.data?.ok);
 }
+export type AudioItem = {
+    pid: string;
+    aid: string;
+    url: string;
+    name: string;
+    create_date: number;
+}
 export type PlayList = {
     list: {
         pid: string;
         name: string;
         create_date: number;
-        list: {
-            pid: string;
-            aid: string;
-            url: string;
-            name: string;
-            create_date: number;
-        }[]
+        list: AudioItem[]
     }[]
 }
 export async function getPlayList(): Promise<PlayList> {
@@ -54,7 +55,8 @@ export async function createPlayList(name: string, list: {name: string; url: str
 
 
 export async function actionRemote(
-    pid: string, action_name: 'start' | 'stop', renderer_url: string, play_mode = 0): Promise<void> {
+    pid: string,
+    action_name: 'start' | 'stop', renderer_url: string, play_mode = PlayMode.PLAY_MODE_RANDOM): Promise<void> {
     await axios.post<any>('/api/v1/action', {
         pid,
         action_name,
@@ -81,4 +83,65 @@ export async function startPlayResource(renderer_url: string, pid: string, aid: 
         aid,
         renderer_url,
     }).then(d => d.data);
+}
+
+type StatusResp = Record<string, {
+    data: Record<string, {
+        status: 'play' | 'stop';
+        renderer_url: string;
+        current_item: AudioItem;
+    }>;
+}>
+export async function getStatusApi(): Promise<StatusResp> {
+    return axios.get<any>('/api/v1/get-status').then(d => d.data);
+}
+
+export async function setVolumeApi(renderer_url: string, level: number): Promise<boolean> {
+    return axios.post<any>('/api/v1/volume', {
+        renderer_url,
+        level,
+    }).then(d => {
+        return d.data?.ok ?? false as boolean;
+    });
+}
+
+export async function nextSongApi(renderer_url: string): Promise<void> {
+    await axios.post<any>('/api/v1/action', {
+        renderer_url,
+        action_name: 'next',
+    });
+}
+export async function prevSongApi(renderer_url: string): Promise<void> {
+    await axios.post<any>('/api/v1/action', {
+        renderer_url,
+        action_name: 'previous',
+    });
+}
+
+export async function playSong(renderer_url: string): Promise<void> {
+    await axios.post<any>('/api/v1/action', {
+        renderer_url,
+        action_name: 'play',
+    });
+}
+
+export async function pauseSong(renderer_url: string): Promise<void> {
+    await axios.post<any>('/api/v1/action', {
+        renderer_url,
+        action_name: 'pause',
+    });
+}
+
+export enum PlayMode {
+    PLAY_MODE_SEQ,
+	PLAY_MODE_REPEAT_ONE, // 单曲循环
+	PLAY_MODE_LIST_REPEAT, // 列表循环
+	PLAY_MODE_RANDOM,
+}
+export async function changePlayModeApi(renderer_url: string, mode: PlayMode): Promise<void> {
+    await axios.post<any>('/api/v1/action', {
+        renderer_url,
+        action_name: 'changePlayMode',
+        play_mode: mode,
+    });
 }

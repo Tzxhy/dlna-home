@@ -8,8 +8,8 @@ import {
 
 type ElementDialogConf = {
     show: boolean;
-    title?: string;
-    body?: React.ReactElement | (() => React.ReactElement);
+    title?: string | React.ReactElement;
+    body?: string | React.ReactElement | (() => React.ReactElement);
     onOk?: () => void;
     onCancel?: () => void;
 	showBtns?: boolean;
@@ -42,12 +42,13 @@ export function MyDialogAdapter() {
     const [_show, setShow] = useState(false);
     close = () => setShow(false);
     show = () => setShow(true);
+    // @ts-ignore
     return <MyDialog show={_show} {...props} />;
 }
 
 type DialogConf = {
-    title?: React.ReactElement;
-    body?: React.ReactElement | (() => React.ReactElement);
+    title?: string | React.ReactElement;
+    body?: string | React.ReactElement | (() => React.ReactElement);
     onOk?: (callback: ()=>void) => void;
     onCancel?: () => void;
 	showBtns?: boolean;

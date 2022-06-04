@@ -26,6 +26,7 @@ import {
 
 import {
     actionRemote,
+    AudioItem,
     createPlayList,
     deletePlayListApi,
     deleteSingleResourceApi,
@@ -36,7 +37,7 @@ import {
 } from '../api';
 import {
     PlayList,
-} from '../api/index.ts';
+} from '../api';
 import {
     showDialog,
 } from '../plugin/dialog';
@@ -48,6 +49,8 @@ export default function Playlist() {
     const ctx = useContext(AppContext);
     const store = ctx[0];
     const dispatch = ctx[1];
+    const currentAid = store.player.currentItem?.aid;
+    const currentPlayMode = store.player.mode;
     const refreshPlayList = async () => {
         const data = await getPlayList();
         dispatch({
@@ -100,7 +103,6 @@ export default function Playlist() {
                         list,
                     } = formRef;
                     if (!name || !list) {
-                        setFormErrorTips('完善表格');
                         return;
                     }
                     let listObj: {name: string; url: string}[];
@@ -149,7 +151,7 @@ export default function Playlist() {
         if (!store.currentDevice.url) {
             return;
         }
-        await actionRemote(currentViewPlayList, 'start', store.currentDevice.url);
+        await actionRemote(currentViewPlayList, 'start', store.currentDevice.url, currentPlayMode);
         const playList = store.playList.find(i => i.pid === currentViewPlayList)!;
 
         dispatch({
@@ -164,7 +166,7 @@ export default function Playlist() {
 
     const [showMoreActionAnchor, setShowMoreActionAnchor] = useState<HTMLElement | null>(null);
     const [showItemMoreAnchor, setShowItemMoreAnchor] = useState<HTMLElement | null>(null);
-    const showItemMoreAnchorRef = useRef<PlayList['list']['list'][number]>();
+    const showItemMoreAnchorRef = useRef<AudioItem>();
 
 
     const playListDetail = (currentViewPlayList: string) => (<>
@@ -291,10 +293,10 @@ export default function Playlist() {
                     return <Box key={i.aid} sx={{
                         color: 'text.primary',
                     }}>
-                        <ListItem disablePadding>
+                        <ListItem disablePadding selected={i.aid === currentAid}>
                             <ListItemButton onClick={(e) => {
                                 showItemMoreAnchorRef.current = i;
-                                setShowItemMoreAnchor(e.target);
+                                setShowItemMoreAnchor(e.target as HTMLElement);
                             }}>
                                 <ListItemText primary={(idx + 1) + '. ' + i.name} />
                             </ListItemButton>
@@ -317,9 +319,9 @@ export default function Playlist() {
                 setShowItemMoreAnchor(null);
 
                 showDialog({
-                    title: `确认删除${showItemMoreAnchorRef.current.name}`,
+                    title: `确认删除${showItemMoreAnchorRef.current!.name}`,
                     onOk: async (close) => {
-                        await deleteSingleResourceApi(showItemMoreAnchorRef.current.aid);
+                        await deleteSingleResourceApi(showItemMoreAnchorRef.current!.aid);
                         refreshPlayList();
                         close();
                     },
@@ -328,7 +330,15 @@ export default function Playlist() {
             <MenuItem onClick={() => {
                 setShowItemMoreAnchor(null);
 
-                startPlayResource(store.currentDevice.url, currentViewPlayList, showItemMoreAnchorRef.current.aid);
+                startPlayResource(store.currentDevice.url, currentViewPlayList, showItemMoreAnchorRef.current!.aid);
+                dispatch({
+                    type: 'show-player',
+                    data: {
+                        currentListPid: currentViewPlayList,
+                        currentItem: showItemMoreAnchorRef.current,
+                        status: 'start',
+                    },
+                });
             }}>从这里播放</MenuItem>
 
         </Menu>

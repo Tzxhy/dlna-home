@@ -27,13 +27,13 @@ function MySnackBar(props: ElementSnackBarConf) {
 
 let close: () => void;
 let show: () => void;
-let props: SnackBarConf;
+let props: ElementSnackBarConf;
 
 export function MySnackBarAdapter() {
     const [_show, setShow] = useState(false);
     close = () => setShow(false);
     show = () => setShow(true);
-    return <MySnackBar show={_show} {...props} />;
+    return <MySnackBar {...props} show={_show} />;
 }
 
 type SnackBarConf = {
@@ -42,6 +42,7 @@ type SnackBarConf = {
     timeout?: number;
 }
 export function showSnackbar(params: SnackBarConf) {
+    // @ts-ignore
     props = {
         ...params,
         onClose: () => {

@@ -256,10 +256,9 @@ func SetPlayList(c *gin.Context) {
 }
 
 type StatusRespItem struct {
-	Status      string `json:"status"`
-	RendererUrl string `json:"renderer_url"`
-	CurrentUrl  string `json:"current_url"`
-	Name        string `json:"name"`
+	CurrentItem models.AudioItem `json:"current_item"`
+	Status      string           `json:"status"`       // 播放器状态
+	RendererUrl string           `json:"renderer_url"` // 播放器地址
 }
 type StatusResp struct {
 	Data map[string]StatusRespItem `json:"data"`
@@ -269,22 +268,19 @@ func GetStatus(c *gin.Context) {
 	var ret = &StatusResp{}
 	ret.Data = make(map[string]StatusRespItem)
 	for rendererUrl, value := range share.TvDataMap {
-		var url = ""
-		var name = ""
+		var item models.AudioItem
 		if value.CurrentIdx < 0 {
 		} else if value.PlayMode == constants.PLAY_MODE_RANDOM {
-			url = value.PlayListTempUrls[value.CurrentIdx].Url
-			name = value.PlayListTempUrls[value.CurrentIdx].Name
-		} else {
-			url = value.PlayListUrls[value.CurrentIdx].Url
-			name = value.PlayListUrls[value.CurrentIdx].Name
-		}
+			item = value.PlayListTempUrls[value.CurrentIdx]
 
+		} else {
+			item = value.PlayListUrls[value.CurrentIdx]
+
+		}
 		ret.Data[rendererUrl] = StatusRespItem{
+			item,
 			value.Status,
 			value.RenderingControlURL,
-			url,
-			name,
 		}
 	}
 
@@ -330,9 +326,17 @@ func jump(actionReq ActionReq) { // 跳到指定歌曲
 
 	tv, ok := share.TvDataMap[rendererUrl]
 	if ok {
-		idx := utils.FindIndex(&tv.PlayListUrls, func(item models.AudioItem) bool {
-			return item.Aid == actionReq.TargetAid
-		})
+		idx := 0
+		if tv.PlayMode == constants.PLAY_MODE_RANDOM {
+			idx = utils.FindIndex(&tv.PlayListTempUrls, func(item models.AudioItem) bool {
+				return item.Aid == actionReq.TargetAid
+			})
+		} else {
+			idx = utils.FindIndex(&tv.PlayListUrls, func(item models.AudioItem) bool {
+				return item.Aid == actionReq.TargetAid
+			})
+		}
+
 		tv.CurrentIdx = int16(idx) - 1
 		if tv.CurrentIdx < -1 {
 			tv.CurrentIdx = -1
@@ -447,6 +451,7 @@ func startPlayPush(actionReq ActionReq) {
 
 	if ok { // 已有，直接操作
 		tv.PlayListUrls = *list
+		changeMode(actionReq)
 		tv.SendtoTV("Play1")
 	} else {
 		tvdata := create(actionReq, rendererUrl)

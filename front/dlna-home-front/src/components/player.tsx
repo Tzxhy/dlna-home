@@ -1,7 +1,7 @@
-import ArrowBackIosNewRoundedIcon from '@mui/icons-material/ArrowBackIosNewRounded';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FormatListBulletedOutlinedIcon from '@mui/icons-material/FormatListBulletedOutlined';
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleFilledWhiteOutlinedIcon from '@mui/icons-material/PlayCircleFilledWhiteOutlined';
@@ -18,11 +18,22 @@ import Container from '@mui/system/Container';
 import {
     memo,
     useContext,
-    useState,
+    useEffect,
+    useRef,
 } from 'react';
 
+import {
+    changePlayModeApi,
+    getStatusApi,
+    nextSongApi,
+    pauseSong,
+    PlayMode,
+    playSong,
+    prevSongApi,
+    setVolumeApi,
+} from '../api';
 import bg from '../assets/img/music.jpg';
-import AppContext from '../store/index.ts';
+import AppContext from '../store';
 
 const Header = memo(function() {
     const ctx = useContext(AppContext);
@@ -39,7 +50,7 @@ const Header = memo(function() {
             dispatch({
                 type: 'hide-player',
             });
-        }}><ArrowBackIosNewRoundedIcon /></IconButton>
+        }}><KeyboardArrowDownRoundedIcon /></IconButton>
         <Box sx={{
             flex: 1,
             textAlign: 'center',
@@ -61,18 +72,25 @@ const Header = memo(function() {
 // 	PLAY_MODE_LIST_REPEAT        // 列表循环
 // 	PLAY_MODE_RANDOM             // 乱序播放
 // )
-const RepeatIcon = memo(function(props: {type: number}) {
+const RepeatIcon = memo(function(props: {type: PlayMode}) {
     const type = props.type;
-    if (type === 1) {
+    if (type === PlayMode.PLAY_MODE_REPEAT_ONE) {
         return <RepeatOneOutlinedIcon />;
     }
-    if (type === 2) {
+    if (type === PlayMode.PLAY_MODE_LIST_REPEAT) {
         return <RepeatOutlinedIcon />;
     }
-    if (type === 3) {
+    if (type === PlayMode.PLAY_MODE_RANDOM) {
         return <ShuffleOutlinedIcon />;
     }
+    return <ShuffleOutlinedIcon />;
 });
+
+const PlayModeList = [
+    PlayMode.PLAY_MODE_REPEAT_ONE,
+    PlayMode.PLAY_MODE_LIST_REPEAT,
+    PlayMode.PLAY_MODE_RANDOM,
+];
 
 export default function Player() {
     const ctx = useContext(AppContext);
@@ -81,6 +99,39 @@ export default function Player() {
     const show = store.player.show;
 
     const status = store.player.status;
+    const device = store.currentDevice?.url;
+    const deviceRef = useRef<string>('');
+    deviceRef.current = device;
+    const currentPlayMode = store.player.mode;
+
+    async function getPlayerStatus() {
+        const data = (await getStatusApi()).data;
+        Object.keys(data).forEach(key => {
+            if (key === deviceRef.current) {
+
+                dispatch({
+                    type: 'update-player',
+                    data: {
+                        currentItem: {
+                            ...data[key as keyof typeof data].current_item,
+                        },
+                    },
+                });
+            }
+        });
+
+    }
+    useEffect(() => {
+        getPlayerStatus();
+
+        const i = setInterval(() => {
+            if (document.visibilityState === 'hidden') return;
+            getPlayerStatus();
+        }, 5000);
+        return () => {
+            clearInterval(i);
+        };
+    }, []);
 
     return <Container sx={{
         display: 'flex',
@@ -110,9 +161,7 @@ export default function Player() {
             }}>{store.player.currentItem?.name}</Typography>
             <IconButton><FavoriteIcon /></IconButton>
 
-
         </Box>
-
 
         <Box sx={{
             pb: 2,
@@ -122,7 +171,7 @@ export default function Player() {
             <Box>
                 <Slider
                     size="small"
-                    defaultValue={70}
+                    defaultValue={0}
                     aria-label="Small"
                     valueLabelDisplay="auto"
                 />
@@ -139,16 +188,43 @@ export default function Player() {
                     alignItems: 'center',
                     justifyContent: 'space-around',
                 }}>
-                    <IconButton onClick={() => {
-
-                    }}><RepeatIcon type={3} /></IconButton>
-                    <IconButton><SkipPreviousOutlinedIcon /></IconButton>
-                    <IconButton size='large'>{
-                        status === 'stop' ?
-                            <PlayCircleFilledWhiteOutlinedIcon fontSize='large' />
-                            : <PauseCircleOutlineOutlinedIcon fontSize='large' />
-                    }</IconButton>
-                    <IconButton><SkipNextOutlinedIcon /></IconButton>
+                    <IconButton onClick={async () => {
+                        const cIdx = PlayModeList.indexOf(currentPlayMode);
+                        const nIdx = (cIdx + 1) % PlayModeList.length;
+                        const nMode = PlayModeList[nIdx];
+                        await changePlayModeApi(device, nMode);
+                        dispatch({
+                            type: 'update-player',
+                            data: {
+                                mode: nMode,
+                            },
+                        });
+                    }}><RepeatIcon type={currentPlayMode} /></IconButton>
+                    <IconButton onClick={async () => {
+                        await prevSongApi(device);
+                        await getPlayerStatus();
+                    }}><SkipPreviousOutlinedIcon /></IconButton>
+                    <IconButton size='large' onClick={() => {
+                        if (status === 'stop') {
+                            playSong(device);
+                            dispatch({
+                                type: 'player-play',
+                            });
+                        } else {
+                            pauseSong(device);
+                            dispatch({
+                                type: 'player-pause',
+                            });
+                        }
+                    }}>{
+                            status === 'stop' ?
+                                <PlayCircleFilledWhiteOutlinedIcon fontSize='large' />
+                                : <PauseCircleOutlineOutlinedIcon fontSize='large' />
+                        }</IconButton>
+                    <IconButton onClick={async () => {
+                        await nextSongApi(device);
+                        await getPlayerStatus();
+                    }}><SkipNextOutlinedIcon /></IconButton>
                     <IconButton><FormatListBulletedOutlinedIcon /></IconButton>
 
                 </Box>
@@ -161,6 +237,9 @@ export default function Player() {
                         orientation="vertical"
                         defaultValue={30}
                         valueLabelDisplay="auto"
+                        onChangeCommitted={(e, v) => {
+                            setVolumeApi(device, v as any as number);
+                        }}
                     />
                 </Box>
             </Box>

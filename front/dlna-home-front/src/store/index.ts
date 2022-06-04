@@ -2,7 +2,8 @@
 import React from 'react';
 
 import {
-    PlayList,
+    AudioItem,
+    PlayList, PlayMode,
 } from '../api';
 
 export const defaultStore = {
@@ -14,15 +15,15 @@ export const defaultStore = {
     playList: [] as PlayList['list'],
     player: {
         status: 'stop',
-        show: true,
+        show: false,
         currentListPid: '',
-        currentItem: {
-            aid: 'BAqptfQX',
-            create_date: 1654165880476,
-            name: '八扇屏.mp3',
-            pid: 'mRWYIQMR',
-            url: 'http://192.168.0.108:8080/api/v1/share/download?sid=wrNEAogo&fid=UaXcxeWWZf',
-        },
+        currentItem: {} as AudioItem,
+        mode: PlayMode.PLAY_MODE_RANDOM,
+    } as {
+        status: 'stop' | 'play';
+        show: boolean;
+        currentItem: AudioItem;
+        mode: PlayMode;
     },
 };
 
@@ -33,7 +34,7 @@ export default AppContext;
 
 type Action = {
     type: string;
-    data: any;
+    data?: any;
 }
 export const reducer = (state: typeof defaultStore, action: Action) => {
     switch (action.type) {
@@ -67,6 +68,31 @@ export const reducer = (state: typeof defaultStore, action: Action) => {
             player: {
                 ...state.player,
                 show: true,
+                ...action.data,
+            },
+        };
+    case 'update-player':
+        return {
+            ...state,
+            player: {
+                ...state.player,
+                ...action.data,
+            },
+        };
+    case 'player-play':
+        return {
+            ...state,
+            player: {
+                ...state.player,
+                status: 'play',
+            },
+        };
+    case 'player-pause':
+        return {
+            ...state,
+            player: {
+                ...state.player,
+                status: 'stop',
             },
         };
     default:
