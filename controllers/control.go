@@ -370,8 +370,8 @@ func changeMode(actionReq ActionReq) {
 	rendererUrl := actionReq.RendererUrl
 
 	tv, ok := share.TvDataMap[rendererUrl]
-	if ok && tv.PlayMode != actionReq.PlayMode {
-		// 当前是随机的话，切换到其他的，那么设置CurrentIdx 去完成接续
+	if ok {
+		// 当前是随机的话，切换到其他的，那么设置 CurrentIdx 去完成接续
 		if tv.PlayMode == constants.PLAY_MODE_RANDOM {
 			currentItem := tv.PlayListTempUrls[tv.CurrentIdx]
 			newIdx := utils.FindIndex(&tv.PlayListUrls, func(item models.AudioItem) bool {

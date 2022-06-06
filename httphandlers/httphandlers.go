@@ -92,6 +92,7 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 		v := tv.CurrentIdx
 		list := tv.PlayListUrls
 		if tv.PlayMode == constants.PLAY_MODE_SEQ { // 顺序播放
+			utils.WriteLog("seq media: ")
 			if v < 0 { // 无，写0
 				tv.CurrentIdx = 0
 				v = 0
@@ -111,8 +112,10 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 			}
 
 		} else if tv.PlayMode == constants.PLAY_MODE_REPEAT_ONE { // 单曲循环
+			utils.WriteLog("single media: ")
 
 		} else if tv.PlayMode == constants.PLAY_MODE_LIST_REPEAT { // 列表循环
+			utils.WriteLog("repeat media: ")
 			if v < 0 { // 无，写0
 				tv.CurrentIdx = 0
 				v = 0
@@ -127,6 +130,7 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 				}
 			}
 		} else if tv.PlayMode == constants.PLAY_MODE_RANDOM { // 随机播放
+			utils.WriteLog("random media: ")
 			// if len(tv.PlayListTempUrls) == 0 { // 没有初始化过
 			// 	var playListTempUrls = make([]models.AudioItem, len(tv.PlayListUrls))
 			// 	copy(playListTempUrls, tv.PlayListUrls)

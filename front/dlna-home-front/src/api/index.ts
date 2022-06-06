@@ -93,7 +93,7 @@ type StatusResp = Record<string, {
     }>;
 }>
 export async function getStatusApi(): Promise<StatusResp> {
-    return axios.get<any>('/api/v1/get-status').then(d => d.data);
+    return axios.get<any>('/api/v1/get-status?' + Date.now()).then(d => d.data);
 }
 
 export async function setVolumeApi(renderer_url: string, level: number): Promise<boolean> {
