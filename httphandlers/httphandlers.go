@@ -150,7 +150,7 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 			}
 		}
 
-		mediaURLinfo, _ := utils.StreamURL(context.Background(), list[v].Url)
+		mediaURLinfo, _ := utils.StreamURLToBytes(context.Background(), list[v].Url)
 
 		serveContent(w, req, tv, mediaURLinfo, s.ffmpeg)
 	}
