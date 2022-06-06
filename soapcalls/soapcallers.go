@@ -44,6 +44,7 @@ type TVPayload struct {
 	CurrentIdx          int16
 	PlayListTempUrls    []models.AudioItem
 	Status              string
+	LastChangeIdxTime   time.Time
 }
 
 type getMuteRespBody struct {

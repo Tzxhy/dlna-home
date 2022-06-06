@@ -91,12 +91,19 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 
 		v := tv.CurrentIdx
 		list := tv.PlayListUrls
-		if tv.PlayMode == constants.PLAY_MODE_SEQ { // 顺序播放
+
+		if !tv.LastChangeIdxTime.IsZero() && time.Since(tv.LastChangeIdxTime) <= 8*time.Second { // 小于一定时间，记为同一资源
+			if tv.PlayMode == constants.PLAY_MODE_RANDOM {
+				list = tv.PlayListTempUrls
+			}
+
+		} else if tv.PlayMode == constants.PLAY_MODE_SEQ { // 顺序播放
 			utils.WriteLog("seq media: ")
 			if v < 0 { // 无，写0
 				tv.CurrentIdx = 0
 				v = 0
 				utils.WriteLog("first media: " + list[v].Name)
+				tv.LastChangeIdxTime = time.Now()
 			} else { // 有
 				if isNewMedia { // 下一曲？ 加1取模；否则还是当前url
 					length := int16(len(list))
@@ -105,6 +112,7 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 						tv.SendtoTV("Stop")
 						return
 					}
+					tv.LastChangeIdxTime = time.Now()
 					tv.CurrentIdx = nextIdx
 					v = nextIdx
 					utils.WriteLog("change media: " + list[v].Name)
@@ -120,6 +128,7 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 				tv.CurrentIdx = 0
 				v = 0
 				utils.WriteLog("first media: " + list[v].Name)
+				tv.LastChangeIdxTime = time.Now()
 			} else { // 有
 				if isNewMedia { // 下一曲？ 加1取模；否则还是当前url
 					length := int16(len(list))
@@ -127,6 +136,7 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 					tv.CurrentIdx = nextIdx
 					v = nextIdx
 					utils.WriteLog("change media: " + list[v].Name)
+					tv.LastChangeIdxTime = time.Now()
 				}
 			}
 		} else if tv.PlayMode == constants.PLAY_MODE_RANDOM { // 随机播放
@@ -143,6 +153,7 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 				tv.CurrentIdx = 0
 				v = 0
 				utils.WriteLog("first media: " + list[v].Name)
+				tv.LastChangeIdxTime = time.Now()
 			} else { // 有
 				if isNewMedia { // 下一曲？ 加1取模；否则还是当前url
 					length := int16(len(list))
@@ -150,8 +161,13 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 					tv.CurrentIdx = nextIdx
 					v = nextIdx
 					utils.WriteLog("change media: " + list[v].Name)
+					tv.LastChangeIdxTime = time.Now()
 				}
 			}
+		}
+
+		if v < 0 {
+			v = 0
 		}
 
 		mediaURLinfo, _ := utils.StreamURLToBytes(context.Background(), list[v].Url)
