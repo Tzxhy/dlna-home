@@ -145,3 +145,18 @@ export async function changePlayModeApi(renderer_url: string, mode: PlayMode): P
         play_mode: mode,
     });
 }
+
+export type GetPositionResp = {
+    position: {
+        track_duration: number;
+        rel_time: number;
+    }
+}
+export async function getPositionApi(renderer_url: string): Promise<GetPositionResp> {
+    return axios.get<any>('/api/v1/get-position', {
+        params: {
+            renderer_url,
+            t: Date.now(),
+        },
+    }).then(d => d.data);
+}

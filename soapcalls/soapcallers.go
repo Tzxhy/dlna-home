@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -112,6 +113,86 @@ func (p *TVPayload) setAVTransportSoapCall() error {
 	}
 
 	return nil
+}
+
+type GetPositionResp struct {
+	TrackDuration uint64 `json:"track_duration"`
+	RelTime       uint64 `json:"rel_time"`
+}
+type GetPositionInfoResponse struct {
+	XMLName       xml.Name `xml:"GetPositionInfoResponse"`
+	TrackDuration string   `xml:"TrackDuration"`
+	RelTime       string   `xml:"RelTime"`
+}
+type envelopeInner struct {
+	XMLName xml.Name                `xml:"Body"`
+	Body    GetPositionInfoResponse `xml:"GetPositionInfoResponse"`
+}
+type GetPositionEnvelopeResp struct {
+	XMLName xml.Name      `xml:"Envelope"`
+	Body    envelopeInner `xml:"Body"`
+}
+
+func (p *TVPayload) GetPositionSoapCall() (GetPositionResp, error) {
+	parsedURLtransport, err := url.Parse(p.ControlURL)
+	if err != nil {
+		return GetPositionResp{}, fmt.Errorf("getPositionSoapCall parse error: %w", err)
+	}
+
+	xmlData, err := getPositionSoapBuild()
+	if err != nil {
+		return GetPositionResp{}, fmt.Errorf("getPositionSoapCall soap build error: %w", err)
+	}
+
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 3
+	retryClient.Logger = nil
+	client := retryClient.StandardClient()
+	req, err := http.NewRequest("POST", parsedURLtransport.String(), bytes.NewReader(xmlData))
+	if err != nil {
+		return GetPositionResp{}, fmt.Errorf("getPositionSoapCall POST error: %w", err)
+	}
+
+	req.Header = http.Header{
+		"SOAPAction":   []string{`"urn:schemas-upnp-org:service:AVTransport:1#GetPositionInfo"`},
+		"content-type": []string{"text/xml"},
+		"charset":      []string{"utf-8"},
+		"Connection":   []string{"close"},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return GetPositionResp{}, fmt.Errorf("getPositionSoapCall Do POST error: %w", err)
+	}
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return GetPositionResp{}, fmt.Errorf("getPositionSoapCall Read Data error: %w", err)
+	}
+	var unmarshalData GetPositionEnvelopeResp
+	err = xml.Unmarshal(data, &unmarshalData)
+	if err != nil {
+		return GetPositionResp{}, fmt.Errorf("getPositionSoapCall Unmarshal error: %w", err)
+	}
+
+	return GetPositionResp{
+		getSecondsFromStr(unmarshalData.Body.Body.TrackDuration),
+		getSecondsFromStr(unmarshalData.Body.Body.RelTime),
+	}, nil
+}
+
+var addStep = [...]uint64{1, 60, 60 * 60}
+
+func getSecondsFromStr(str string) uint64 {
+	sp := strings.Split(str, ":")
+	for i, j := 0, len(sp)-1; i < j; i, j = i+1, j-1 {
+		sp[i], sp[j] = sp[j], sp[i]
+	}
+	total := uint64(0)
+	for index, value := range sp {
+		v, _ := strconv.Atoi(value)
+		total += uint64(uint64(v) * addStep[index])
+	}
+	return total
 }
 
 // AVTransportActionSoapCall builds and sends the AVTransport actions

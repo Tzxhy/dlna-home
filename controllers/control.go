@@ -25,6 +25,7 @@ type StartOneReq struct {
 	RendererUrl string `json:"renderer_url" form:"renderer_url" binding:"required"`
 }
 
+// 开始单文件播放
 func StartOne(c *gin.Context) {
 	var actionReq StartOneReq
 	if c.ShouldBind(&actionReq) != nil {
@@ -59,6 +60,7 @@ func StartOne(c *gin.Context) {
 	})
 }
 
+// 获取设备列表
 func GetDeviceList(c *gin.Context) {
 	deviceList, err := devices.LoadSSDPServices(2)
 	if err != nil {
@@ -78,6 +80,7 @@ type PlayListItem struct {
 	List []models.AudioItem `json:"list"`
 }
 
+// 获取播放列表
 func GetPlayList(c *gin.Context) {
 	list, _ := models.GetPlayList()
 	var newList []PlayListItem
@@ -106,6 +109,7 @@ type DeletePlayListReq struct {
 	Pid string `json:"pid" binding:"required"`
 }
 
+// 删除一个播放列表
 func DeletePlayList(c *gin.Context) {
 	var deletePlayListReq DeletePlayListReq
 	if c.ShouldBind(&deletePlayListReq) != nil {
@@ -115,10 +119,93 @@ func DeletePlayList(c *gin.Context) {
 	models.DeletePlayList(deletePlayListReq.Pid)
 }
 
+type CreatePlayListReq struct {
+	Name string `json:"name" binding:"required"`
+}
+
+// 创建一个播放列表
+func CreatePlayList(c *gin.Context) {
+	var createPlayList CreatePlayListReq
+	if c.ShouldBind(&createPlayList) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+	pid, err := models.CreatePlayList(createPlayList.Name)
+	if err == nil {
+		c.JSON(http.StatusOK, &gin.H{
+			"pid": pid,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, &gin.H{
+		"err": err.Error(),
+	})
+}
+
+type RenamePlayListReq struct {
+	Pid  string `json:"pid" binding:"required"`
+	Name string `json:"new_name" form:"new_name" binding:"required"`
+}
+
+// 重命名播放列表
+func RenamePlayList(c *gin.Context) {
+	var renamePlayListReq RenamePlayListReq
+	if c.ShouldBind(&renamePlayListReq) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+	models.RenamePlayList(renamePlayListReq.Pid, renamePlayListReq.Name)
+	c.JSON(http.StatusOK, &gin.H{
+		"ok": true,
+	})
+}
+
+type DeleteSingleResourceReq struct {
+	Aid string `json:"aid" form:"aid" binding:"required"`
+}
+
+// 删除播放列表中单个资源
+func DeleteSingleResource(c *gin.Context) {
+	var deleteSingleResourceReq DeleteSingleResourceReq
+	if c.ShouldBind(&deleteSingleResourceReq) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+
+	models.DeleteSingleResource(deleteSingleResourceReq.Aid)
+
+	c.JSON(http.StatusOK, &gin.H{
+		"ok": true,
+	})
+}
+
+type SetPlayListReq struct {
+	Pid  string                 `json:"pid" binding:"required"`
+	Name string                 `json:"name" form:"name"`
+	List []models.ListItemParam `json:"list" binding:"required"`
+}
+
+// 全量更新播放列表
+func SetPlayList(c *gin.Context) {
+	var setPlayListReq SetPlayListReq
+	if c.ShouldBind(&setPlayListReq) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+	ok := models.SetPlayList(setPlayListReq.Pid, setPlayListReq.List)
+	if setPlayListReq.Name != "" {
+		models.RenamePlayList(setPlayListReq.Pid, setPlayListReq.Name)
+	}
+	c.JSON(http.StatusOK, &gin.H{
+		"ok": ok,
+	})
+}
+
 type GetDeviceVolumeReq struct {
 	RendererUrl string `json:"renderer_url" form:"renderer_url" binding:"required"`
 }
 
+// 获取音量
 func GetDeviceVolume(c *gin.Context) {
 	var getDeviceVolumeReq GetDeviceVolumeReq
 	if c.ShouldBind(&getDeviceVolumeReq) != nil {
@@ -151,6 +238,7 @@ type SetDeviceVolumeReq struct {
 	Level       uint8  `json:"level" form:"level"`
 }
 
+// 设置音量
 func SetDeviceVolume(c *gin.Context) {
 	var setDeviceVolumeReq SetDeviceVolumeReq
 	if c.ShouldBind(&setDeviceVolumeReq) != nil {
@@ -177,84 +265,6 @@ func SetDeviceVolume(c *gin.Context) {
 	}
 }
 
-type CreatePlayListReq struct {
-	Name string `json:"name" binding:"required"`
-}
-
-func CreatePlayList(c *gin.Context) {
-	var createPlayList CreatePlayListReq
-	if c.ShouldBind(&createPlayList) != nil {
-		utils.ReturnParamNotValid(c)
-		return
-	}
-	pid, err := models.CreatePlayList(createPlayList.Name)
-	if err == nil {
-		c.JSON(http.StatusOK, &gin.H{
-			"pid": pid,
-		})
-		return
-	}
-	c.JSON(http.StatusOK, &gin.H{
-		"err": err.Error(),
-	})
-}
-
-type RenamePlayListReq struct {
-	Pid  string `json:"pid" binding:"required"`
-	Name string `json:"new_name" form:"new_name" binding:"required"`
-}
-
-func RenamePlayList(c *gin.Context) {
-	var renamePlayListReq RenamePlayListReq
-	if c.ShouldBind(&renamePlayListReq) != nil {
-		utils.ReturnParamNotValid(c)
-		return
-	}
-	models.RenamePlayList(renamePlayListReq.Pid, renamePlayListReq.Name)
-	c.JSON(http.StatusOK, &gin.H{
-		"ok": true,
-	})
-}
-
-type DeleteSingleResourceReq struct {
-	Aid string `json:"aid" form:"aid" binding:"required"`
-}
-
-func DeleteSingleResource(c *gin.Context) {
-	var deleteSingleResourceReq DeleteSingleResourceReq
-	if c.ShouldBind(&deleteSingleResourceReq) != nil {
-		utils.ReturnParamNotValid(c)
-		return
-	}
-
-	models.DeleteSingleResource(deleteSingleResourceReq.Aid)
-
-	c.JSON(http.StatusOK, &gin.H{
-		"ok": true,
-	})
-}
-
-type SetPlayListReq struct {
-	Pid  string                 `json:"pid" binding:"required"`
-	Name string                 `json:"name" form:"name"`
-	List []models.ListItemParam `json:"list" binding:"required"`
-}
-
-func SetPlayList(c *gin.Context) {
-	var setPlayListReq SetPlayListReq
-	if c.ShouldBind(&setPlayListReq) != nil {
-		utils.ReturnParamNotValid(c)
-		return
-	}
-	ok := models.SetPlayList(setPlayListReq.Pid, setPlayListReq.List)
-	if setPlayListReq.Name != "" {
-		models.RenamePlayList(setPlayListReq.Pid, setPlayListReq.Name)
-	}
-	c.JSON(http.StatusOK, &gin.H{
-		"ok": ok,
-	})
-}
-
 type StatusRespItem struct {
 	CurrentItem models.AudioItem `json:"current_item"`
 	Status      string           `json:"status"`       // 播放器状态
@@ -264,6 +274,7 @@ type StatusResp struct {
 	Data map[string]StatusRespItem `json:"data"`
 }
 
+// 获取状态
 func GetStatus(c *gin.Context) {
 	var ret = &StatusResp{}
 	ret.Data = make(map[string]StatusRespItem)
@@ -321,6 +332,8 @@ func Action(c *gin.Context) {
 		jump(actionReq)
 	}
 }
+
+// 操作
 func jump(actionReq ActionReq) { // 跳到指定歌曲
 	rendererUrl := actionReq.RendererUrl
 
@@ -492,4 +505,36 @@ func pause(actionReq ActionReq) {
 	if ok {
 		tv.AVTransportActionSoapCall("Pause")
 	}
+}
+
+// 相关操作 end
+
+type GetPositionReq struct {
+	RendererUrl string `form:"renderer_url" binding:"required"`
+}
+
+// 获取设备位置
+func GetPosition(c *gin.Context) {
+	var getPositionReq GetPositionReq
+	err := c.ShouldBindQuery(&getPositionReq)
+	if err != nil {
+		log.Println("err: ", err)
+		utils.ReturnParamNotValid(c)
+		return
+	}
+
+	tv, ok := share.TvDataMap[getPositionReq.RendererUrl]
+	if ok {
+		position, err := tv.GetPositionSoapCall()
+		if err != nil {
+			log.Println("err: ", err)
+			utils.ReturnParamNotValid(c)
+			return
+		}
+		c.JSON(http.StatusOK, &gin.H{
+			"position": position,
+		})
+
+	}
+
 }

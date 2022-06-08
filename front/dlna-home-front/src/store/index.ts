@@ -1,10 +1,12 @@
-
 import React from 'react';
 
 import {
     AudioItem,
     PlayList, PlayMode,
 } from '../api';
+import {
+    GetPositionResp,
+} from './../api/index';
 
 export const defaultStore = {
     currentDevice: {
@@ -19,11 +21,16 @@ export const defaultStore = {
         currentListPid: '',
         currentItem: {} as AudioItem,
         mode: PlayMode.PLAY_MODE_RANDOM,
+        position: {
+            track_duration: 999,
+            rel_time: 0,
+        } as GetPositionResp['position'],
     } as {
         status: 'stop' | 'play';
         show: boolean;
         currentItem: AudioItem;
         mode: PlayMode;
+        position: GetPositionResp['position'];
     },
 };
 
@@ -93,6 +100,16 @@ export const reducer = (state: typeof defaultStore, action: Action) => {
             player: {
                 ...state.player,
                 status: 'stop',
+            },
+        };
+    case 'update-position':
+        return {
+            ...state,
+            player: {
+                ...state.player,
+                position: {
+                    ...action.data,
+                },
             },
         };
     default:
