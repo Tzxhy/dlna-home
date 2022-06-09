@@ -151,6 +151,23 @@ type GetPositionBodyAction struct {
 type GetPositionBody struct {
 	GetPositionBodyAction GetPositionBodyAction `xml:"u:GetPositionInfo"`
 }
+
+type SetPositionBodyAction struct {
+	InstanceID string
+	Unit       string
+	Target     string
+	Schema     string `xml:"xmlns:u,attr"`
+}
+type SetPositionBody struct {
+	SetPositionBodyAction SetPositionBodyAction `xml:"u:Seek"`
+}
+type setPositionEnvelope struct {
+	XMLName     xml.Name        `xml:"s:Envelope"`
+	Schema      string          `xml:"xmlns:s,attr"`
+	Encoding    string          `xml:"s:encodingStyle,attr"`
+	SetPosition SetPositionBody `xml:"s:Body"`
+}
+
 type getPositionEnvelope struct {
 	XMLName     xml.Name        `xml:"s:Envelope"`
 	Schema      string          `xml:"xmlns:s,attr"`
@@ -337,6 +354,33 @@ func getPositionSoapBuild() ([]byte, error) {
 	b, err := xml.Marshal(d)
 	if err != nil {
 		return nil, fmt.Errorf("getPositionSoapBuild #2 Marshal error: %w", err)
+	}
+
+	// Samsung TV hack.
+	b = bytes.ReplaceAll(b, []byte("&#34;"), []byte(`"`))
+	b = bytes.ReplaceAll(b, []byte("&amp;"), []byte("&"))
+
+	return append(xmlStart, b...), nil
+}
+
+func setPositionSoapBuild(rel_time string) ([]byte, error) {
+	d := setPositionEnvelope{
+		XMLName:  xml.Name{},
+		Schema:   "http://schemas.xmlsoap.org/soap/envelope/",
+		Encoding: "http://schemas.xmlsoap.org/soap/encoding/",
+		SetPosition: SetPositionBody{
+			SetPositionBodyAction{
+				"0",
+				"REL_TIME",
+				rel_time,
+				"urn:schemas-upnp-org:service:AVTransport:1",
+			},
+		},
+	}
+	xmlStart := []byte("<?xml version='1.0' encoding='utf-8'?>")
+	b, err := xml.Marshal(d)
+	if err != nil {
+		return nil, fmt.Errorf("setPositionSoapBuild #2 Marshal error: %w", err)
 	}
 
 	// Samsung TV hack.

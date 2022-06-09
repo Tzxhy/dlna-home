@@ -160,3 +160,9 @@ export async function getPositionApi(renderer_url: string): Promise<GetPositionR
         },
     }).then(d => d.data);
 }
+export async function setPositionApi(renderer_url: string, rel_time: number): Promise<void> {
+    await axios.post<any>('/api/v1/set-position', {
+        renderer_url,
+        rel_time,
+    });
+}

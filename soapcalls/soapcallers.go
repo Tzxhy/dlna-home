@@ -180,6 +180,44 @@ func (p *TVPayload) GetPositionSoapCall() (GetPositionResp, error) {
 	}, nil
 }
 
+func (p *TVPayload) SetPositionSoapCall(seek string) error {
+	parsedURLtransport, err := url.Parse(p.ControlURL)
+	if err != nil {
+		return fmt.Errorf("SetPositionSoapCall parse error: %w", err)
+	}
+
+	xmlData, err := setPositionSoapBuild(seek)
+	if err != nil {
+		return fmt.Errorf("SetPositionSoapCall soap build error: %w", err)
+	}
+
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 3
+	retryClient.Logger = nil
+	client := retryClient.StandardClient()
+	req, err := http.NewRequest("POST", parsedURLtransport.String(), bytes.NewReader(xmlData))
+	if err != nil {
+		return fmt.Errorf("SetPositionSoapCall POST error: %w", err)
+	}
+
+	req.Header = http.Header{
+		"SOAPAction":   []string{`"urn:schemas-upnp-org:service:AVTransport:1#Seek"`},
+		"content-type": []string{"text/xml"},
+		"charset":      []string{"utf-8"},
+		"Connection":   []string{"close"},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("SetPositionSoapCall Do POST error: %w", err)
+	}
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("SetPositionSoapCall Read Data error: %w", err)
+	}
+	return nil
+}
+
 var addStep = [...]uint64{1, 60, 60 * 60}
 
 func getSecondsFromStr(str string) uint64 {

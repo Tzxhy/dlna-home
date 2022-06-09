@@ -29,6 +29,7 @@ import {
     useContext,
     useEffect,
     useRef,
+    useState,
 } from 'react';
 
 import {
@@ -40,6 +41,7 @@ import {
     PlayMode,
     playSong,
     prevSongApi,
+    setPositionApi,
     setVolumeApi,
 } from '../api';
 import bg from '../assets/img/music.jpg';
@@ -143,6 +145,7 @@ export default function Player() {
                         currentItem: {
                             ...data[key as keyof typeof data].current_item,
                         },
+                        status: data[key as keyof typeof data].status,
                     },
                 });
             }
@@ -172,6 +175,32 @@ export default function Player() {
     const theme = useTheme();
 
     const lightIconColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+
+    const [isDragProgress, setIsDragProgress] = useState(false);
+    const isDragProgressRef = useRef(false)
+    isDragProgressRef.current = isDragProgress
+
+    const [positionTemp, setPositionTemp] = useState(0);
+
+    useEffect(() => {
+        if (!isDragProgressRef.current) {
+            setPositionTemp(position.rel_time);
+        }
+    }, [position.rel_time])
+
+    useEffect(() => {
+        let timer = 0;
+        if (status === 'play') {
+            timer = window.setInterval(() => {
+                setPositionTemp( i=>i+1);
+            }, 1000);
+        }
+        return () => {
+            if (timer) {
+                window.clearInterval(timer)
+            }
+        }
+    }, [status]);
 
     return <Container sx={{
         display: 'flex',
@@ -212,10 +241,22 @@ export default function Player() {
             <Slider
                 aria-label="time-indicator"
                 size="small"
-                value={position.rel_time}
+                value={positionTemp}
                 min={0}
                 step={1}
                 max={position.track_duration}
+                onChangeCommitted={async (_, value) => {
+                    await setPositionApi(deviceRef.current, value as number);
+                    setIsDragProgress(false);
+                }}
+                onChange={(_, v) => {
+                    setPositionTemp(v as number);
+                    
+                    if (!isDragProgress) {
+                        console.log(222);
+                        setIsDragProgress(true);
+                    }
+                }}
                 // onChange={(_, value) => dispatch({
                 //     type: 'update-position',
                 //     data: {
@@ -260,8 +301,8 @@ export default function Player() {
                     mt: -2,
                 }}
             >
-                <TinyText>{formatDuration(position.rel_time)}</TinyText>
-                <TinyText>-{formatDuration(position.track_duration - position.rel_time)}</TinyText>
+                <TinyText>{formatDuration(positionTemp)}</TinyText>
+                <TinyText>-{formatDuration(position.track_duration - positionTemp)}</TinyText>
             </Box>
         </Box>
         <Box sx={{

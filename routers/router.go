@@ -14,6 +14,7 @@ func InitRouter() *gin.Engine {
 
 	v1.GET("get-status", controllers.GetStatus)
 	v1.GET("get-position", controllers.GetPosition)
+	v1.POST("set-position", controllers.SetPosition)
 	v1.GET("device-list", controllers.GetDeviceList)
 	v1.GET("playlist", controllers.GetPlayList)
 	v1.POST("delete-playlist", controllers.DeletePlayList)

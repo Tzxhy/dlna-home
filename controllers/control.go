@@ -538,3 +538,25 @@ func GetPosition(c *gin.Context) {
 	}
 
 }
+
+type SetPositionReq struct {
+	RendererUrl string `form:"renderer_url" json:"renderer_url" binding:"required"`
+	RelTime     uint16 `form:"rel_time" json:"rel_time"`
+}
+
+// 设置设备的播放位置
+func SetPosition(c *gin.Context) {
+	var setPositionReq SetPositionReq
+	err := c.ShouldBind(&setPositionReq)
+	if err != nil {
+		log.Println("err: ", err)
+		utils.ReturnParamNotValid(c)
+		return
+	}
+
+	tv, ok := share.TvDataMap[setPositionReq.RendererUrl]
+	if ok {
+		time := utils.GetRelTimeFromSecond(setPositionReq.RelTime)
+		tv.SetPositionSoapCall(time)
+	}
+}
