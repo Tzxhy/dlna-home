@@ -2,11 +2,13 @@ package httphandlers
 
 import (
 	"bytes"
-	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os/exec"
 	"strings"
@@ -92,7 +94,7 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 		v := tv.CurrentIdx
 		list := tv.PlayListUrls
 
-		if !tv.LastChangeIdxTime.IsZero() && time.Since(tv.LastChangeIdxTime) <= 8*time.Second { // 小于一定时间，记为同一资源
+		if !tv.LastChangeIdxTime.IsZero() && time.Since(tv.LastChangeIdxTime) <= 5*time.Second { // 小于一定时间，记为同一资源
 			if tv.PlayMode == constants.PLAY_MODE_RANDOM {
 				list = tv.PlayListTempUrls
 			}
@@ -170,9 +172,23 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 			v = 0
 		}
 
-		mediaURLinfo, _ := utils.StreamURLToBytes(context.Background(), list[v].Url)
+		remote, err := url.Parse(list[v].Url)
 
-		serveContent(w, req, tv, mediaURLinfo, s.ffmpeg)
+		if err != nil {
+			log.Println("Parse err: ", err)
+		}
+
+		proxy := httputil.NewSingleHostReverseProxy(remote)
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		proxy.Transport = tr
+
+		proxy.Director = func(r *http.Request) {
+			r.URL = remote
+		}
+
+		proxy.ServeHTTP(w, req)
 	}
 }
 
