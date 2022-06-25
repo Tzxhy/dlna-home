@@ -464,6 +464,7 @@ func startPlayPush(actionReq ActionReq) {
 
 	if ok { // 已有，直接操作
 		tv.PlayListUrls = *list
+		tv.CurrentIdx = -1
 		changeMode(actionReq)
 		tv.SendtoTV("Play1")
 	} else {
