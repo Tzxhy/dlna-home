@@ -386,6 +386,9 @@ func changeMode(actionReq ActionReq) {
 	if ok {
 		// 当前是随机的话，切换到其他的，那么设置 CurrentIdx 去完成接续
 		if tv.PlayMode == constants.PLAY_MODE_RANDOM {
+			if tv.CurrentIdx < 0 {
+				return
+			}
 			currentItem := tv.PlayListTempUrls[tv.CurrentIdx]
 			newIdx := utils.FindIndex(&tv.PlayListUrls, func(item models.AudioItem) bool {
 				return item.Aid == currentItem.Aid
@@ -464,8 +467,8 @@ func startPlayPush(actionReq ActionReq) {
 
 	if ok { // 已有，直接操作
 		tv.PlayListUrls = *list
-		tv.CurrentIdx = -1
 		changeMode(actionReq)
+		tv.CurrentIdx = -1
 		tv.SendtoTV("Play1")
 	} else {
 		tvdata := create(actionReq, rendererUrl)
