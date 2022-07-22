@@ -178,6 +178,8 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 			log.Println("Parse err: ", err)
 		}
 
+		log.Println("remote: ", remote)
+
 		proxy := httputil.NewSingleHostReverseProxy(remote)
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
