@@ -77,9 +77,11 @@ func (s *HTTPserver) StartServer(
 
 func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
+		log.Println("enter serveMediaHandler")
 		renderer_url := req.URL.Query()["renderer_url"]
 		rendererUrl, decodeErr := url.QueryUnescape(renderer_url[0])
 		if decodeErr != nil {
+			log.Println("decodeErr error: ", decodeErr)
 			return
 		}
 		header := req.Header
@@ -111,6 +113,7 @@ func (s *HTTPserver) serveMediaHandler() http.HandlerFunc {
 					length := int16(len(list))
 					nextIdx := (v + 1) % length
 					if v+1 >= length { // 播放完毕，直接停止
+						log.Println("顺序播放，发送停止指令")
 						tv.SendtoTV("Stop")
 						return
 					}

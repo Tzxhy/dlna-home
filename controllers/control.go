@@ -471,6 +471,7 @@ func startPlayPush(actionReq ActionReq) {
 		tv.CurrentIdx = -1
 		tv.SendtoTV("Play1")
 	} else {
+		log.Println("has tv")
 		tvdata := create(actionReq, rendererUrl)
 		tvdata.PlayListUrls = *list
 		changeMode(actionReq)
