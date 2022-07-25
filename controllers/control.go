@@ -460,7 +460,7 @@ var create = func(actionReq ActionReq, rendererUrl string) *soapcalls.TVPayload 
 }
 
 func checkServerIsOnline() bool {
-	parser, err := url.Parse(globalWhereToListen)
+	parser, err := url.Parse("http://" + globalWhereToListen)
 	if err != nil {
 		log.Println("解析 globalWhereToListen 失败")
 		log.Print(err)
