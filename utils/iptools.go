@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -69,6 +70,7 @@ func TcpGather(ip, port string) error {
 	// 3 秒超时
 	conn, err := net.DialTimeout("tcp", address, 3*time.Second)
 	if err != nil {
+		log.Println("err: ", err)
 		return errors.New("failed")
 	} else {
 		if conn != nil {

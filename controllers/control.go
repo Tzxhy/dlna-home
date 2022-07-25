@@ -470,6 +470,9 @@ func checkServerIsOnline() bool {
 	host := parser.Host
 	port := parser.Port()
 
+	log.Println("host: ", host)
+	log.Println("port: ", port)
+
 	err = utils.TcpGather(host, port)
 	if err != nil {
 		log.Println("TcpGather err: ", err)
