@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -61,6 +62,22 @@ CHECK:
 	}
 	conn.Close()
 	return strconv.Itoa(port), nil
+}
+
+func TcpGather(ip, port string) error {
+	address := net.JoinHostPort(ip, port)
+	// 3 秒超时
+	conn, err := net.DialTimeout("tcp", address, 3*time.Second)
+	if err != nil {
+		return errors.New("failed")
+	} else {
+		if conn != nil {
+			_ = conn.Close()
+			return nil
+		} else {
+			return errors.New("failed")
+		}
+	}
 }
 
 // HostPortIsAlive - We use this function to periodically

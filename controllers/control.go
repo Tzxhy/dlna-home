@@ -459,6 +459,26 @@ var create = func(actionReq ActionReq, rendererUrl string) *soapcalls.TVPayload 
 	return tvdata
 }
 
+func checkServerIsOnline() bool {
+	parser, err := url.Parse(globalWhereToListen)
+	if err != nil {
+		log.Println("解析 globalWhereToListen 失败")
+		log.Print(err)
+		return false
+	}
+
+	host := parser.Host
+	port := parser.Port()
+
+	err = utils.TcpGather(host, port)
+	if err != nil {
+		log.Println("TcpGather err: ", err)
+		// 有错误，说明服务不在线
+		return false
+	}
+	return true
+}
+
 func startPlayPush(actionReq ActionReq) {
 	rendererUrl := actionReq.RendererUrl
 
@@ -466,6 +486,12 @@ func startPlayPush(actionReq ActionReq) {
 	list := models.GetPlayListItems(actionReq.Pid)
 
 	if ok { // 已有，直接操作
+		if !checkServerIsOnline() { // 服务不在线
+			log.Println("服务不在线，重启服务")
+			delete(share.TvDataMap, rendererUrl)
+			startPlayPush((actionReq))
+			return
+		}
 		tv.PlayListUrls = *list
 		changeMode(actionReq)
 		tv.CurrentIdx = -1
