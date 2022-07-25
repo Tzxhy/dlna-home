@@ -467,7 +467,7 @@ func checkServerIsOnline() bool {
 		return false
 	}
 
-	host := parser.Host
+	host := parser.Hostname()
 	port := parser.Port()
 
 	log.Println("host: ", host)
