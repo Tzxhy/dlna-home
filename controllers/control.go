@@ -491,6 +491,7 @@ func startPlayPush(actionReq ActionReq) {
 	if ok { // 已有，直接操作
 		if !checkServerIsOnline() { // 服务不在线
 			log.Println("服务不在线，重启服务")
+			hasCreateMediaServer = false
 			delete(share.TvDataMap, rendererUrl)
 			startPlayPush((actionReq))
 			return
