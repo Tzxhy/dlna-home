@@ -5,4 +5,4 @@ Website = "http://localhost:8111"
   Name = "DLNA"
   ID = "com.gitee.dlnahome"
   Version = "1.0.1"
-  Build = 15
+  Build = 16

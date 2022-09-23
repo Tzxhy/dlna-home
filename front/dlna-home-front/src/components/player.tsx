@@ -127,6 +127,8 @@ export default function Player() {
     const dispatch = ctx[1];
     const show = store.player.show;
     const position = store.player.position;
+    const showRef = useRef(show);
+    showRef.current = show;
 
     const status = store.player.status;
     const device = store.currentDevice?.url;
@@ -163,7 +165,7 @@ export default function Player() {
         getPlayerStatus();
 
         const i = setInterval(() => {
-            if (document.visibilityState === 'hidden') return;
+            if (document.visibilityState === 'hidden' || !showRef.current) return;
             getPlayerStatus();
             getPosition();
         }, 5000);
