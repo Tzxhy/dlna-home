@@ -28,3 +28,4 @@ assets
 *.njsproj
 *.sln
 *.sw?
+**.apk

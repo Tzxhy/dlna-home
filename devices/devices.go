@@ -2,6 +2,7 @@ package devices
 
 import (
 	"fmt"
+	"log"
 	"sort"
 
 	"gitee.com/tzxhy/dlna-home/soapcalls"
@@ -14,6 +15,7 @@ import (
 func LoadSSDPServices(delay int) (map[string]string, error) {
 	// Reset device list every time we call this.
 	deviceList := make(map[string]string)
+	ssdp.Logger = log.Default()
 	list, err := ssdp.Search(ssdp.All, delay, "")
 	if err != nil {
 		return nil, fmt.Errorf("LoadSSDPservices search error: %w", err)

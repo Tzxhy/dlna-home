@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -60,9 +61,18 @@ func StartOne(c *gin.Context) {
 	})
 }
 
+var isAndroid = runtime.GOOS == "android"
+var loadSSDPServiceDelay = 2
+
+func init() {
+	if isAndroid {
+		loadSSDPServiceDelay = 5
+	}
+}
+
 // 获取设备列表
 func GetDeviceList(c *gin.Context) {
-	deviceList, err := devices.LoadSSDPServices(2)
+	deviceList, err := devices.LoadSSDPServices(loadSSDPServiceDelay)
 	if err != nil {
 		var empty = make(map[string]string)
 		c.JSON(http.StatusOK, &gin.H{

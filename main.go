@@ -9,6 +9,6 @@ func main() {
 	initial.InitAll()
 	api := routers.InitRouter()
 
-	api.Run(":8081")
+	api.Run(":8082")
 
 }

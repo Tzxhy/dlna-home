@@ -1,0 +1,8 @@
+Website = "http://localhost:8111"
+
+[Details]
+  Icon = "dlna.png"
+  Name = "DLNA"
+  ID = "com.gitee.dlnahome"
+  Version = "1.0.1"
+  Build = 15
