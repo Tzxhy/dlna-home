@@ -47,7 +47,6 @@ func main() {
 func delayOpen(a fyne.App, delaySecond uint8) {
 	<-time.After(time.Duration(delaySecond) * time.Second)
 	u, _ := url.Parse("http://localhost:8111")
-	_ = a.OpenURL(u)
 	a.OpenURL(u)
 }
 

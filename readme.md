@@ -76,3 +76,4 @@ Any ideas or contributes are welcomed!
 
 # android
 GIN_MODE=release GO386='softfloat' ANDROID_NDK_HOME=/Users/tanzhixuan/Library/Android/sdk/ndk/23.1.7779620 fyne package -os android/arm64 
+GIN_MODE=release GO386='softfloat' ANDROID_NDK_HOME=G:\android\sdk\ndk\23.1.7779620 fyne package -os android/arm64 
