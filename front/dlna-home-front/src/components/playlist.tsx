@@ -26,6 +26,7 @@ import {
 
 import {
     actionRemote,
+    addPartialPlayListApi,
     AudioItem,
     createPlayList,
     deletePlayListApi,
@@ -34,9 +35,6 @@ import {
     renamePlayList,
     startPlayResource,
     updatePlayListApi,
-} from '../api';
-import {
-    PlayList,
 } from '../api';
 import {
     showDialog,
@@ -273,7 +271,40 @@ export default function Playlist() {
                             },
                         });
                     }}>替换更新</MenuItem>
-                    <MenuItem >增量添加</MenuItem>
+                    <MenuItem onClick={() => {
+                        setShowMoreActionAnchor(null);
+
+                        let newPlayListList = '';
+
+                        showDialog({
+                            title: '增量更新',
+                            body: <>
+                                <TextField
+                                    margin="dense"
+                                    label="列表"
+                                    type="text"
+                                    defaultValue={newPlayListList}
+                                    multiline
+                                    maxRows={4}
+                                    onChange={(e) => newPlayListList = e.target.value}
+                                    fullWidth
+                                    variant="standard"
+                                />
+                            </>,
+                            onOk: async (close) => {
+                                if (!newPlayListList) return;
+                                let listObj: {name: string; url: string}[];
+                                try {
+                                    listObj = JSON.parse(newPlayListList);
+                                } catch(e) {
+                                    return;
+                                }
+                                await addPartialPlayListApi(currentViewPlayList, listObj);
+                                refreshPlayList();
+                                close();
+                            },
+                        });
+                    }}>增量添加</MenuItem>
                 </Menu>
             </>}
         />

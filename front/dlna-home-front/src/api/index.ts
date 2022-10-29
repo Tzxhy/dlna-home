@@ -38,6 +38,13 @@ export async function updatePlayListApi(pid: string, name: string, list: {name: 
     });
 }
 
+export async function addPartialPlayListApi(pid: string, list: {name: string; url: string}[]): Promise<void> {
+    await axios.post('/api/v1/update-partial-list', {
+        pid: pid,
+        list,
+    });
+}
+
 export async function renamePlayList(pid: string, new_name: string): Promise<void> {
     await axios.post('/api/v1/rename-playlist', {
         pid: pid,

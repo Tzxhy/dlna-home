@@ -194,6 +194,10 @@ type SetPlayListReq struct {
 	Name string                 `json:"name" form:"name"`
 	List []models.ListItemParam `json:"list" binding:"required"`
 }
+type AddListReq struct {
+	Pid  string                 `json:"pid" binding:"required"`
+	List []models.ListItemParam `json:"list" binding:"required"`
+}
 
 // 全量更新播放列表
 func SetPlayList(c *gin.Context) {
@@ -206,6 +210,20 @@ func SetPlayList(c *gin.Context) {
 	if setPlayListReq.Name != "" {
 		models.RenamePlayList(setPlayListReq.Pid, setPlayListReq.Name)
 	}
+	c.JSON(http.StatusOK, &gin.H{
+		"ok": ok,
+	})
+}
+
+// 增量更新播放列表
+func AddPartialListForPlay(c *gin.Context) {
+	var addPlayListReq AddListReq
+	if c.ShouldBind(&addPlayListReq) != nil {
+		utils.ReturnParamNotValid(c)
+		return
+	}
+	ok := models.AddListForPlay(addPlayListReq.Pid, addPlayListReq.List)
+
 	c.JSON(http.StatusOK, &gin.H{
 		"ok": ok,
 	})

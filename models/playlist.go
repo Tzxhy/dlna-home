@@ -81,6 +81,29 @@ func SetPlayList(pid string, list []ListItemParam) bool {
 
 }
 
+func AddListForPlay(pid string, list []ListItemParam) bool {
+	err := DB.Transaction(func(tx *gorm.DB) error {
+
+		newList := utils.Map(&list, func(item ListItemParam) AudioItem {
+			aid := utils.GenerateRid()
+			return AudioItem{
+				Aid:            aid,
+				PlayListItemID: pid,
+				Name:           item.Name,
+				Url:            item.Url,
+			}
+		})
+
+		err := DB.Create(&newList).Error
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return err == nil
+
+}
+
 func DeletePlayList(pid string) bool {
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		// 删除原有绑定
